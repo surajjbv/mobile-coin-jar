@@ -7,3 +7,5 @@ Kid-friendly coin jar web app. Single file: `index.html`.
 - One coin drawn per coin, up to 500 (above that the jar fills proportionally).
 
 Deploy: every push to `main` auto-deploys to Netlify.
+
+Live: https://coin-jar-surajjbv.netlify.app
