@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Coin Jar</title>
+<meta name="apple-mobile-web-app-title" content="Coin Jar">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky:#BFE6F0; --sky2:#8FD0E0; --ink:#173848; --gold:#F7C21A; --gold-dk:#C98A0E;
+  --gold-lt:#FFE68A; --glass:rgba(255,255,255,.35); --glass-edge:rgba(255,255,255,.85);
+  --lid:#E2574C; --red:#D22F2F; --amber:#B86E00; --green:#23823A; --lid-dk:#B23A31; --sheet:#FFFFFF; --muted:#5B7682;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--sky:#0F2E3A;--sky2:#1B4A5B;--ink:#EAF6FA;--glass:rgba(255,255,255,.12);--glass-edge:rgba(255,255,255,.55);--sheet:#17394A;--muted:#A6C3CE;--red:#FF6B6B;--amber:#FFB938;--green:#5FD37A}
+}
+:root[data-theme="dark"]{--sky:#0F2E3A;--sky2:#1B4A5B;--ink:#EAF6FA;--glass:rgba(255,255,255,.12);--glass-edge:rgba(255,255,255,.55);--sheet:#17394A;--muted:#A6C3CE;--red:#FF6B6B;--amber:#FFB938;--green:#5FD37A}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(120% 80% at 50% 10%,var(--sky2),var(--sky));color:var(--ink);
+  font-family:"Baloo 2",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;touch-action:manipulation;
+  -webkit-user-select:none;user-select:none;overflow:hidden}
+main{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:16px}
+#count{background:none;border:0;color:var(--ink);font:inherit;font-weight:800;
+  font-size:clamp(56px,17vw,88px);line-height:.9;letter-spacing:-.02em;cursor:pointer;
+  display:flex;align-items:center;gap:.12em}
+#count.red{color:var(--red)}#count.amber{color:var(--amber)}#count.green{color:var(--green)}
+#count .c{width:.62em;height:.62em;border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--gold-lt),var(--gold) 55%,var(--gold-dk));
+  box-shadow:inset 0 -.05em 0 var(--gold-dk)}
+#count.bump{animation:bump .35s ease}
+@keyframes bump{50%{transform:scale(1.12)}}
+.sub{font-size:18px;font-weight:600;color:var(--muted);margin-bottom:8px}
+svg#jar{width:min(94vw,480px);height:auto;max-height:76vh;overflow:visible}
+.coin.drop{animation:drop .55s cubic-bezier(.3,.9,.4,1.15) both}
+@keyframes drop{from{transform:translateY(-360px)}}
+@media (prefers-reduced-motion:reduce){.coin.drop,#count.bump{animation:none}}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,30,40,.45);display:none;align-items:flex-end;justify-content:center;z-index:5}
+.scrim.open{display:flex}
+.sheet{background:var(--sheet);width:100%;max-width:440px;border-radius:28px 28px 0 0;
+  padding:22px 22px calc(22px + env(safe-area-inset-bottom,0px));animation:up .25s ease}
+@keyframes up{from{transform:translateY(100%)}}
+.sheet h2{margin:0;text-align:center;font-size:24px}
+.sheet p.hint{margin:2px 0 14px;text-align:center;color:var(--muted);font-size:16px;min-height:24px}
+.sheet p.err{color:#D8443A}
+.dots{display:flex;justify-content:center;gap:16px;margin:6px 0 18px}
+.dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--muted)}
+.dots i.on{background:var(--gold);border-color:var(--gold-dk)}
+.dots.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pad button{height:62px;border-radius:18px;border:0;background:var(--sky);color:var(--ink);font:inherit;font-size:28px;font-weight:700}
+.pad button:active{transform:scale(.95)}
+.pad button.ghost{background:none;font-size:18px;color:var(--muted)}
+label{display:block;font-size:16px;color:var(--muted);margin:10px 0 4px}
+.row{display:flex;gap:8px;align-items:center}
+.row input{flex:1;min-width:0;height:56px;border-radius:16px;border:2px solid var(--sky2);background:transparent;color:var(--ink);
+  font:inherit;font-size:26px;font-weight:700;text-align:center}
+.row button{height:56px;min-width:64px;border-radius:16px;border:0;background:var(--sky);color:var(--ink);font:inherit;font-size:20px;font-weight:700}
+.quick{display:flex;gap:8px;margin-top:8px}
+.quick button{flex:1;height:40px;border-radius:12px;border:0;background:var(--sky);color:var(--ink);font:inherit;font-size:16px;font-weight:600}
+.actions{display:flex;gap:10px;margin-top:20px}
+.actions button{flex:1;height:56px;border-radius:18px;border:0;font:inherit;font-size:20px;font-weight:700}
+.primary{background:var(--gold);color:#3A2600}
+.secondary{background:var(--sky);color:var(--ink)}
+.link{display:block;margin:14px auto 0;background:none;border:0;color:var(--muted);font:inherit;font-size:16px;text-decoration:underline}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+  <button id="count" aria-label="Coin count. Triple-tap to edit"><span class="c"></span><span id="num">0</span></button>
+  <div class="sub" id="sub">gold coins</div>
+  <svg id="jar" viewBox="0 0 300 390" aria-hidden="true">
+    <defs>
+      <clipPath id="inside"><path d="M62 92 Q46 100 46 130 L46 340 Q46 372 80 372 L220 372 Q254 372 254 340 L254 130 Q254 100 238 92 Z"/></clipPath>
+      <radialGradient id="cg" cx="35%" cy="30%"><stop offset="0" stop-color="#FFE68A"/><stop offset=".6" stop-color="#F7C21A"/><stop offset="1" stop-color="#E0A512"/></radialGradient>
+    </defs>
+    <ellipse cx="150" cy="380" rx="120" ry="9" fill="rgba(0,0,0,.12)"/>
+    <g clip-path="url(#inside)" id="coins"></g>
+    <!-- glass -->
+    <path d="M62 92 Q46 100 46 130 L46 340 Q46 372 80 372 L220 372 Q254 372 254 340 L254 130 Q254 100 238 92 Z"
+      fill="var(--glass)" stroke="var(--glass-edge)" stroke-width="5" style="mix-blend-mode:normal" fill-opacity=".55"/>
+    <path d="M66 140 Q64 240 70 330" stroke="rgba(255,255,255,.8)" stroke-width="9" stroke-linecap="round" fill="none"/>
+    <path d="M82 118 L82 126" stroke="rgba(255,255,255,.8)" stroke-width="9" stroke-linecap="round"/>
+    <!-- neck + lid -->
+    <rect x="70" y="72" width="160" height="24" rx="10" fill="var(--glass)" stroke="var(--glass-edge)" stroke-width="4"/>
+    <rect x="58" y="34" width="184" height="42" rx="14" fill="var(--lid)"/>
+    <rect x="58" y="62" width="184" height="14" rx="7" fill="var(--lid-dk)"/>
+    <rect x="120" y="44" width="60" height="9" rx="4.5" fill="var(--lid-dk)"/>
+    <rect x="74" y="40" width="40" height="7" rx="3.5" fill="rgba(255,255,255,.45)"/>
+  </svg>
+</main>
+
+<div class="scrim" id="scrim"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+             set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let state={coins:store.get('cj_coins',40),full:store.get('cj_full',100)};
+let pin=store.get('cj_pin',null);
+let shownCoins=0;
+
+// ---- jar ----
+const CAP=500; // above this, each coin shown stands for more than one
+let L={};
+function layout(){
+  const N=Math.max(1,Math.min(state.full,CAP));
+  const per=Math.max(2,Math.round(Math.sqrt(N/4.76)));
+  const rows=Math.ceil(N/per), sp=204/per, k=sp/34*1.05;
+  L={per,rows,sp,k,rowH:(262-10*k)/Math.max(rows-1,1)};
+}
+function rnd(i){const x=Math.sin(i*9301+49297)*233280;return x-Math.floor(x)}
+function coinSVG(i){
+  const {per,sp,k,rowH}=L;
+  const row=Math.floor(i/per), col=i%per, off=row%2?sp/2:0;
+  const x=50+sp/2+off+col*sp+(rnd(i)-.5)*sp*.25, y=372-10*k-row*rowH+(rnd(i+7)-.5)*rowH*.3;
+  const tilt=(rnd(i+3)-.5)*18;
+  return `<g class="coin"><g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${tilt.toFixed(1)}) scale(${k.toFixed(3)})">
+    <ellipse cy="4" rx="19" ry="7.5" fill="#C98A0E"/><ellipse rx="19" ry="7.5" fill="url(#cg)"/>
+    <ellipse rx="11" ry="4" fill="none" stroke="#D99A10" stroke-width="1.6"/></g></g>`;
+}
+function render(animate){
+  layout();
+  const target=state.full<=CAP?Math.min(state.coins,state.full)
+    :(state.coins>0?Math.max(1,Math.round(Math.min(state.coins/state.full,1)*CAP)):0);
+  const g=$('#coins');
+  if(target<shownCoins||!animate){g.innerHTML=Array.from({length:target},(_,i)=>coinSVG(i)).join('')}
+  else{
+    let html='';for(let i=shownCoins;i<target;i++)html+=coinSVG(i);
+    g.insertAdjacentHTML('beforeend',html);
+    [...g.children].slice(shownCoins).forEach((el,k)=>{el.classList.add('drop');el.style.animationDelay=(k*Math.min(12,900/Math.max(target-shownCoins,1))).toFixed(0)+'ms'});
+  }
+  shownCoins=target;
+  $('#num').textContent=state.coins.toLocaleString();
+  const pct=state.full>0?state.coins/state.full*100:0;
+  const c=$('#count');c.classList.remove('red','amber','green');
+  c.classList.add(pct>=80?'green':pct<=20?'red':'amber');
+  $('#sub').textContent=state.coins===0?'the jar is empty':state.coins>=state.full?'the jar is full!':state.coins===1?'gold coin':'gold coins';
+  if(animate){const c=$('#count');c.classList.remove('bump');void c.offsetWidth;c.classList.add('bump')}
+}
+
+// ---- triple tap ----
+let taps=[];
+$('#count').addEventListener('click',()=>{
+  const now=Date.now();taps=taps.filter(t=>now-t<700);taps.push(now);
+  if(taps.length>=3){taps=[];openPin(pin?'enter':'set1')}
+});
+
+// ---- sheet ----
+const scrim=$('#scrim'),sheet=$('#sheet');
+function close(){scrim.classList.remove('open')}
+scrim.addEventListener('click',e=>{if(e.target===scrim)close()});
+let entry='',firstPin='',mode='';
+const copy={set1:['Create a passcode','Pick 4 digits only you know'],set2:['Confirm passcode','Enter the same 4 digits again'],
+  enter:['Enter passcode','Grown-ups only'],change1:['New passcode','Pick 4 new digits'],change2:['Confirm new passcode','Enter the same 4 digits again']};
+function openPin(m,err){
+  mode=m;entry='';
+  sheet.innerHTML=`<h2>${copy[m][0]}</h2><p class="hint ${err?'err':''}">${err||copy[m][1]}</p>
+  <div class="dots" id="dots">${'<i></i>'.repeat(4)}</div>
+  <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join('')}
+  <button class="ghost" data-k="x">Cancel</button><button data-k="0">0</button><button class="ghost" data-k="b">Delete</button></div>`;
+  scrim.classList.add('open');
+  sheet.querySelectorAll('.pad button').forEach(b=>b.onclick=()=>key(b.dataset.k));
+}
+function dots(){[...$('#dots').children].forEach((d,i)=>d.classList.toggle('on',i<entry.length))}
+function key(k){
+  if(k==='x')return close();
+  if(k==='b'){entry=entry.slice(0,-1);return dots()}
+  if(entry.length<4){entry+=k;dots()}
+  if(entry.length===4)setTimeout(done,150);
+}
+function fail(msg,next){const d=$('#dots');d.classList.add('shake');setTimeout(()=>openPin(next,msg),350)}
+function done(){
+  if(mode==='set1'||mode==='change1'){firstPin=entry;openPin(mode==='set1'?'set2':'change2')}
+  else if(mode==='set2'||mode==='change2'){
+    if(entry===firstPin){pin=entry;store.set('cj_pin',pin);openEdit()}
+    else fail('Those didn\u2019t match. Try again.',mode==='set2'?'set1':'change1');
+  }
+  else if(mode==='enter'){entry===pin?openEdit():fail('Wrong passcode. Try again.','enter')}
+}
+function openEdit(){
+  sheet.innerHTML=`<h2>Set the coins</h2><p class="hint">Changes show in the jar right away</p>
+  <label for="ci">Coins in the jar</label>
+  <div class="row"><button data-d="-1" aria-label="Remove one">−</button><input id="ci" type="number" inputmode="numeric" min="0" value="${state.coins}"><button data-d="1" aria-label="Add one">+</button></div>
+  <div class="quick"><button data-s="0">Empty</button><button data-d="-10">−10</button><button data-d="10">+10</button><button data-s="full">Fill up</button></div>
+  <label for="fi">Jar is full at</label>
+  <div class="row"><input id="fi" type="number" inputmode="numeric" min="1" value="${state.full}"></div>
+  <div class="actions"><button class="secondary" id="cancel">Cancel</button><button class="primary" id="save">Save</button></div>
+  <button class="link" id="chg">Change passcode</button>`;
+  scrim.classList.add('open');
+  const ci=$('#ci'),fi=$('#fi');
+  const val=()=>Math.max(0,parseInt(ci.value)||0);
+  sheet.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>ci.value=Math.max(0,val()+ +b.dataset.d));
+  sheet.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>ci.value=b.dataset.s==='full'?Math.max(1,parseInt(fi.value)||100):0);
+  $('#cancel').onclick=close;
+  $('#chg').onclick=()=>openPin('change1');
+  $('#save').onclick=()=>{
+    const prevFull=state.full;
+    state.coins=val();state.full=Math.max(1,parseInt(fi.value)||100);
+    store.set('cj_coins',state.coins);store.set('cj_full',state.full);
+    close();
+    if(prevFull!==state.full){shownCoins=0;$('#coins').innerHTML=''}
+    render(true);
+  };
+}
+render(true);
+</script>
+</body>
+</html>
