@@ -50,7 +50,14 @@ of the number warns when it's running low.
 - Up to 300 coins are drawn (above that the jar fills proportionally). The render loop stops as soon as the
   coins are still, so an idle jar uses no battery.
 - The count, passcode and editing live in a plain script, so they keep working even if the 3D jar can't load.
-- Web Audio synthesises the coin sounds, and hosting is on Netlify: every push to `main` deploys automatically.
+- Coin sounds are real recordings (a random clink per collision, a bounce for hard hits, a jingle for a shake),
+  pitched and panned a little differently each time with Web Audio. Coins hitting the glass sound lower and softer.
+- Hosting is on Netlify: every push to `main` deploys automatically.
+
+## Credits
+
+Coin sounds: [Coins Clink](https://creatorassets.com/audio/coins-clink/) by CreatorAssets, released as CC0 (public domain).
+They were trimmed and converted to AAC for `sounds/`.
 
 ## Run locally
 

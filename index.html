@@ -142,11 +142,12 @@ function render(){
 window.jarReady=j=>{jar=j;$('#status').hidden=true;render()};
 window.jarFailed=()=>{$('#status').textContent='Couldn’t load the 3D jar. Check the internet connection and reopen the app.'};
 
-// ---- sound: synthesised, no audio files ----
+// ---- sound: real coin recordings (CC0, sounds/), with a synthesised fallback until they load ----
 let actx=null,lastClink=0,soundOn=store.get('cj_sound',true);
 function unlockAudio(){ // browsers only allow audio after a tap
   if(!actx){const A=window.AudioContext||window.webkitAudioContext;if(!A)return;actx=new A()}
   if(actx.state==='suspended')actx.resume();
+  loadSamples();
 }
 document.addEventListener('pointerdown',unlockAudio,{passive:true});
 let master=null;
@@ -188,11 +189,34 @@ function coinStrike(ctx,dest,t,f,len,vol){
   ng.gain.setValueAtTime(1.4,t);ng.gain.exponentialRampToValueAtTime(.001,t+.014);
   n.connect(bp);bp.connect(ng);ng.connect(bus);n.start(t);n.stop(t+.03);
 }
-function clink(vol=1){
+// recorded clinks: single coin-on-coin hits, harder hits that bounce, and handfuls of coins for a shake
+const SAMPLES={clink:[1,2,3,4,5],bounce:[1,2,3,4],jingle:[1,2]};
+let buffers=null;
+async function loadSamples(){ // one at a time (clinks first), retrying once: gentle on a patchy phone connection
+  if(buffers||!actx)return;buffers={clink:[],bounce:[],jingle:[]};
+  for(const [kind,ids] of Object.entries(SAMPLES))for(const i of ids)for(let attempt=0;attempt<2;attempt++){
+    try{
+      const a=await (await fetch(`sounds/${kind}-${i}.m4a`)).arrayBuffer();
+      buffers[kind].push(await new Promise((ok,no)=>actx.decodeAudioData(a,ok,no)));break;
+    }catch(e){}
+  }
+}
+function play(kind,vol,rate=1){
+  const list=buffers&&buffers[kind];if(!list||!list.length)return false;
+  const src=actx.createBufferSource(),g=actx.createGain();
+  src.buffer=list[Math.floor(Math.random()*list.length)];
+  src.playbackRate.value=rate*(.93+Math.random()*.14); // every coin a little different
+  g.gain.value=vol;src.connect(g);
+  if(actx.createStereoPanner){const p=actx.createStereoPanner();p.pan.value=(Math.random()-.5)*.6;g.connect(p);p.connect(out())}else g.connect(out());
+  src.start();return true;
+}
+function clink(vol=1,glass=false){ // glass: a coin hitting the jar rather than another coin
   if(!audible())return;
   const t=actx.currentTime;if(t-lastClink<.035)return;lastClink=t; // many coins at once → a jingle, not a roar
-  coinStrike(actx,out(),t,1900+Math.random()*1100,.6+Math.random()*.5,.35*vol); // every coin a little different
+  if(play(vol>.6?'bounce':'clink',.55*vol*(glass?.7:1),glass?.85:1))return;
+  coinStrike(actx,out(),t,1900+Math.random()*1100,.6+Math.random()*.5,.35*vol); // recordings not loaded yet
 }
+function jingle(strong){if(audible())play('jingle',strong?.7:.5,1)}
 function whoosh(){ // a coin leaving the jar
   if(!audible())return;const t=actx.currentTime;tone(t,900,.07,.22,'sine',260);
 }
@@ -522,6 +546,7 @@ function askForTilt(){ // iPhone only lets a page read motion after a tap
 
 // ---- shake / tap: toss the coins against gravity ----
 function jolt(s=1){
+  if(coins.length)jingle(s>1.1);
   const up=upAxis();
   coins.forEach(b=>{const m=b.mass(),k=(2+Math.random()*4)*s;
     b.applyImpulse({x:(up.x*k+(Math.random()-.5)*3*s)*m,y:(up.y*k+(Math.random()-.5)*3*s)*m,z:(up.z*k+(Math.random()-.5)*3*s)*m},true);
@@ -569,7 +594,7 @@ function step(){
   events.drainCollisionEvents((h1,h2,started)=>{
     if(!started)return;const b1=world.getCollider(h1).parent(),b2=world.getCollider(h2).parent();
     const v1=b1.linvel(),v2=b2.linvel(),s=Math.hypot(v1.x-v2.x,v1.y-v2.y,v1.z-v2.z);
-    if(s>1.2)clink(Math.min(1,.2+s/8));
+    if(s>1.2)clink(Math.min(1,.2+s/8),b1.isFixed()||b2.isFixed());
   });
 }
 function frame(now){
