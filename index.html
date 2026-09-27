@@ -40,16 +40,8 @@ main{height:100%;display:flex;flex-direction:column;align-items:center;justify-c
 svg#jar{width:min(94vw,480px);height:auto;max-height:76vh;overflow:visible;cursor:pointer;transform-origin:50% 95%}
 svg#jar.wiggle{animation:wiggle .45s ease}
 @keyframes wiggle{20%{transform:rotate(-3deg)}45%{transform:rotate(2.5deg)}70%{transform:rotate(-1.5deg)}}
-/* fall, bounce twice, settle; --b is the bounce height scaled to coin size */
-.coin.drop{animation:drop .8s both}
-@keyframes drop{
-  0%{transform:translateY(-380px);animation-timing-function:cubic-bezier(.5,0,1,1)}
-  55%{transform:translateY(0);animation-timing-function:cubic-bezier(0,0,.5,1)}
-  70%{transform:translateY(calc(var(--b,12px)*-1));animation-timing-function:cubic-bezier(.5,0,1,1)}
-  82%{transform:translateY(0);animation-timing-function:cubic-bezier(0,0,.5,1)}
-  90%{transform:translateY(calc(var(--b,12px)*-.25));animation-timing-function:cubic-bezier(.5,0,1,1)}
-  100%{transform:translateY(0)}}
-@media (prefers-reduced-motion:reduce){.coin.drop,#count.bump,svg#jar.wiggle{animation:none}}
+@media (prefers-reduced-motion:reduce){#count.bump,svg#jar.wiggle{animation:none}}
+#hint{font-size:16px;font-weight:600;color:var(--muted);margin-top:6px}
 
 /* sheet */
 .scrim{position:fixed;inset:0;background:rgba(10,30,40,.45);display:none;align-items:flex-end;justify-content:center;z-index:5}
@@ -132,63 +124,156 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
     <rect x="120" y="44" width="60" height="9" rx="4.5" fill="var(--lid-dk)"/>
     <rect x="74" y="40" width="40" height="7" rx="3.5" fill="rgba(255,255,255,.45)"/>
   </svg>
+  <div class="hint" id="hint" hidden>Tap the jar, then tilt your phone! 📱</div>
 </main>
 
 <div class="scrim" id="scrim"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js" integrity="sha512-6+7rTBmR6pRFe9fa0vCFjFaHZj/XYa7774bEBzRtxgdpIJOS++R3cKd6Prg/eJmxtsJotd8KAg4g57uuVQsZKA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
 const $=s=>document.querySelector(s);
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
              set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 let state={coins:store.get('cj_coins',10),full:store.get('cj_full',100)};
 let pin=store.get('cj_pin',null);
-let shownCoins=0;
 
-// ---- jar ----
-const CAP=500; // above this, each coin shown stands for more than one
-let L={};
+// ---- jar: every coin is a Matter.js body inside the glass, drawn as an SVG <use> ----
+const CAP=300; // above this, each coin shown stands for more than one (keeps phones smooth)
+const {Engine,Bodies,Body,Composite,Sleeping,Events}=Matter;
+const engine=Engine.create({enableSleeping:true,positionIterations:8,velocityIterations:6});
+// static walls tracing the inside of the jar in viewBox units: floor 372, sides 46/254, lid 92
+const wall=(x,y,w,h,a=0)=>Bodies.rectangle(x,y,w,h,{isStatic:true,angle:a,friction:.1});
+Composite.add(engine.world,[wall(150,397,320,50),wall(150,67,320,50),wall(21,230,50,400),wall(279,230,50,400),
+  wall(46,372,34,34,Math.PI/4),wall(254,372,34,34,Math.PI/4),wall(46,92,40,40,Math.PI/4),wall(254,92,40,40,Math.PI/4)]);
+let L={},coins=[],wanted=0,dropTimer=0;
 function layout(){
   const N=Math.max(1,Math.min(state.full,CAP));
   const per=Math.max(2,Math.round(Math.sqrt(N/4.76)));
-  const rows=Math.ceil(N/per), sp=204/per, k=sp/34*1.05;
-  L={per,rows,sp,k,rowH:(262-10*k)/Math.max(rows-1,1)};
+  const rows=Math.ceil(N/per),sp=204/per,k=sp/34*1.05,rowH=(262-10*k)/Math.max(rows-1,1);
+  // tumbling coins pack tighter the thinner they are, so body thickness grows with N; tuned so a
+  // full jar fills to the shoulders (85–92% of the height) for any "full at" value up to CAP
+  const cl=v=>Math.max(0,Math.min(1,v)),thick=.82+.23*cl((N-20)/30)+.5*cl((N-100)/200);
+  const w=Math.min(sp*.9,36*k);
+  // the drawing (38 units wide) just overhangs the body so coins don't vanish into the glass
+  L={full:state.full,per,rows,sp,rowH,w,h:Math.min(rowH*thick,17*k),k:Math.min(k,w/33)};
 }
 function rnd(i){const x=Math.sin(i*9301+49297)*233280;return x-Math.floor(x)}
-function coinSVG(i){
-  const {per,sp,k,rowH}=L;
-  const row=Math.floor(i/per), col=i%per, off=row%2?sp/2:0;
-  const x=50+sp/2+off+col*sp+(rnd(i)-.5)*sp*.25, y=372-10*k-row*rowH+(rnd(i+7)-.5)*rowH*.3;
-  const tilt=(rnd(i+3)-.5)*18, look='ABC'[Math.floor(rnd(i+11)*3)];
-  return `<g class="coin"><use href="#c${look}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${tilt.toFixed(1)}) scale(${k.toFixed(3)})"/></g>`;
+function draw({b,el}){
+  el.setAttribute('transform',`translate(${b.position.x.toFixed(1)} ${b.position.y.toFixed(1)}) rotate(${(b.angle*57.2958).toFixed(1)}) translate(0 ${(-2*L.k).toFixed(2)}) scale(${L.k.toFixed(3)})`);
 }
-const DROP_MS=800, LAND_AT=.55; // must match the .coin.drop keyframes
-function render(animate){
-  layout();
-  const target=state.full<=CAP?Math.min(state.coins,state.full)
-    :(state.coins>0?Math.max(1,Math.round(Math.min(state.coins/state.full,1)*CAP)):0);
-  const g=$('#coins');
-  if(target<shownCoins||!animate){g.innerHTML=Array.from({length:target},(_,i)=>coinSVG(i)).join('')}
-  else{
-    let html='';for(let i=shownCoins;i<target;i++)html+=coinSVG(i);
-    g.insertAdjacentHTML('beforeend',html);
-    const gap=Math.min(90,1200/Math.max(target-shownCoins,1));
-    [...g.children].slice(shownCoins).forEach((el,i)=>{
-      const delay=i*gap;
-      el.classList.add('drop');el.style.animationDelay=delay.toFixed(0)+'ms';el.style.setProperty('--b',(12*L.k).toFixed(1)+'px');
-      if(soundOn&&actx&&actx.state==='running')setTimeout(()=>clink(.7+Math.random()*.4),delay+DROP_MS*LAND_AT);
-    });
+function addCoin(x,y,angle){
+  const i=coins.length,b=Bodies.rectangle(x,y,L.w,L.h,{angle,friction:.15,frictionStatic:.3,restitution:.15,frictionAir:.012,
+    chamfer:{radius:Math.min(L.w,L.h)*.3}});
+  const el=document.createElementNS('http://www.w3.org/2000/svg','use');
+  el.setAttribute('href','#c'+'ABC'[Math.floor(rnd(i+11)*3)]);
+  $('#coins').appendChild(el);Composite.add(engine.world,b);
+  const c={b,el};coins.push(c);draw(c);
+}
+function clearCoins(list){list.forEach(c=>{Composite.remove(engine.world,c.b);c.el.remove()})}
+// how: 'place' stacks coins neatly (page load, new jar size); otherwise new coins drop in from the top
+function sync(how){
+  clearInterval(dropTimer);
+  if(how==='place'){
+    const {per,sp,rowH,w,h}=L;
+    for(let i=coins.length;i<wanted;i++){
+      const row=Math.floor(i/per),col=i%per,x=50+sp/2+(row%2?sp/2:0)+col*sp;
+      addCoin(Math.min(Math.max(x,47+w/2),253-w/2),372-h/2-row*rowH,(rnd(i+3)-.5)*.3);
+    }
   }
-  shownCoins=target;
+  if(coins.length>wanted){ // take coins off the top of the pile
+    coins.sort((a,b)=>a.b.position.y-b.b.position.y);clearCoins(coins.splice(0,coins.length-wanted));
+  }
+  const n=wanted-coins.length;
+  if(n>0)dropTimer=setInterval(()=>{
+    if(coins.length>=wanted)return clearInterval(dropTimer);
+    addCoin(75+Math.random()*150,98+Math.random()*8,(Math.random()-.5)*1.2);wake();
+  },Math.max(15,Math.min(110,1500/n)));
+  wake();
+}
+function render(how){
+  if(L.full!==state.full){clearCoins(coins);coins=[];layout();how='place'}
+  wanted=state.full<=CAP?Math.min(state.coins,state.full)
+    :(state.coins>0?Math.max(1,Math.round(Math.min(state.coins/state.full,1)*CAP)):0);
+  sync(how);
   $('#num').textContent=state.coins.toLocaleString();
   const pct=state.full>0?state.coins/state.full*100:0;
   const c=$('#count');c.classList.remove('red','amber','green');
   c.classList.add(pct>=80?'green':pct<=20?'red':'amber');
   $('#sub').textContent=state.coins===0?'the jar is empty':state.coins>=state.full?'the jar is full!':state.coins===1?'gold coin':'gold coins';
-  if(animate){const c=$('#count');c.classList.remove('bump');void c.offsetWidth;c.classList.add('bump')}
+  c.classList.remove('bump');void c.offsetWidth;c.classList.add('bump');
 }
 
+// ---- simulation loop: fixed 60 Hz steps; stops when every coin is asleep to save battery ----
+let raf=0,last=0,acc=0;
+function wake(){coins.forEach(c=>Sleeping.set(c.b,false));if(!raf){last=performance.now();raf=requestAnimationFrame(tick)}}
+function tick(now){
+  acc+=Math.min(now-last,100);last=now;
+  while(acc>=1000/60){Engine.update(engine,1000/60);acc-=1000/60}
+  let awake=0;for(const c of coins)if(!c.b.isSleeping){draw(c);awake++}
+  raf=awake||coins.length<wanted?requestAnimationFrame(tick):0;
+}
+
+// ---- tilt: gravity follows the phone ----
+// Screen gravity comes from the accelerometer (no gimbal lock when the phone is held upright).
+// Browsers disagree on its sign, so the first clearly-tilted orientation reading calibrates it;
+// the orientation angles alone are the fallback when there is no accelerometer.
+let accelSign=0,usingAccel=false;
+function toScreen(x,y){ // undo screen rotation (landscape)
+  const a=((screen.orientation&&screen.orientation.angle)??window.orientation??0)*Math.PI/180;
+  return [x*Math.cos(a)+y*Math.sin(a),-x*Math.sin(a)+y*Math.cos(a)];
+}
+function setGravity(x,y){
+  const g=engine.gravity;x=g.x*.6+x*.4;y=g.y*.6+y*.4; // smooth out sensor jitter
+  const moved=Math.hypot(x-g.x,y-g.y)>.02;g.x=x;g.y=y;if(moved)wake();
+  $('#hint').hidden=true;
+}
+let orientG=null;
+addEventListener('deviceorientation',e=>{
+  if(e.beta==null||e.gamma==null)return;
+  const r=Math.PI/180,b=e.beta*r,g=e.gamma*r;
+  orientG=[Math.sin(g)*Math.cos(b),Math.sin(b)]; // world "down" projected onto a portrait screen
+  if(!usingAccel)setGravity(...toScreen(...orientG));
+});
+addEventListener('devicemotion',e=>{
+  const a=e.accelerationIncludingGravity;if(!a||a.x==null||a.y==null)return;
+  let v=[-a.x/9.81,a.y/9.81]; // per spec a device at rest reports the upward reaction to gravity
+  if(!accelSign){ // wait for a clear orientation reading, then check the accelerometer agrees
+    if(!orientG||Math.hypot(...orientG)<.5||Math.hypot(...v)<.5)return;
+    accelSign=v[0]*orientG[0]+v[1]*orientG[1]<0?-1:1;usingAccel=true;
+  }
+  setGravity(...toScreen(v[0]*accelSign,v[1]*accelSign));
+});
+// iPhone only lets a page read motion after a tap, so the first tap on the jar asks
+const mustAsk=typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function';
+if(mustAsk)$('#hint').hidden=false;
+function askForTilt(){
+  if(!mustAsk)return;
+  DeviceOrientationEvent.requestPermission().catch(()=>{});
+  if(typeof DeviceMotionEvent.requestPermission==='function')DeviceMotionEvent.requestPermission().catch(()=>{});
+}
+
+// ---- shake (or tap the jar): toss the coins against gravity ----
+function jolt(s=1){
+  if(!coins.length)return;
+  const g=engine.gravity,m=Math.hypot(g.x,g.y)||1,ux=-g.x/m||0,uy=m>0?-g.y/m:-1;
+  wake();
+  coins.forEach(({b})=>{const up=(1+Math.random()*4)*s,side=(Math.random()-.5)*5*s;
+    Body.setVelocity(b,{x:b.velocity.x+ux*up-uy*side,y:b.velocity.y+uy*up+ux*side})});
+}
+let lastShake=0;
+addEventListener('devicemotion',e=>{
+  const a=e.acceleration,ag=e.accelerationIncludingGravity,now=Date.now();
+  const m=a&&a.x!=null?Math.hypot(a.x,a.y,a.z):ag&&ag.x!=null?Math.abs(Math.hypot(ag.x,ag.y,ag.z)-9.81):0;
+  if(m>14&&now-lastShake>300){lastShake=now;jolt(Math.min(1.6,m/14))}
+});
+$('#jar').addEventListener('click',()=>{
+  askForTilt();
+  const j=$('#jar');j.classList.remove('wiggle');void j.offsetWidth;j.classList.add('wiggle');
+  jolt(.8);
+});
+
 // ---- sound: a metallic "ting" synthesised with a few inharmonic sine partials ----
-let actx=null,lastClink=0,soundOn=store.get('cj_sound',true);
+let actx=null,lastClink=0,lastBuzz=0,soundOn=store.get('cj_sound',true);
 function unlockAudio(){ // browsers only allow audio after a tap
   if(!actx){const A=window.AudioContext||window.webkitAudioContext;if(!A)return;actx=new A()}
   if(actx.state==='suspended')actx.resume();
@@ -205,11 +290,13 @@ function clink(vol=1){
     o.start(t);o.stop(t+decay+.02);
   });
 }
-
-// ---- tap the jar: it wiggles and the coins jingle ----
-$('#jar').addEventListener('click',()=>{
-  const j=$('#jar');j.classList.remove('wiggle');void j.offsetWidth;j.classList.add('wiggle');
-  if(shownCoins)[0,70,150,260].forEach((d,i)=>setTimeout(()=>clink(1-i*.18),d));
+// clink when coins actually hit something; a tiny buzz on hard hits (Android only — iPhone has no web vibration)
+Events.on(engine,'collisionStart',e=>{
+  for(const p of e.pairs){
+    const s=Math.max(p.bodyA.speed,p.bodyB.speed);if(s<1.2)continue;
+    clink(Math.min(1,.25+s/6));
+    if(s>4&&navigator.vibrate&&navigator.userActivation?.hasBeenActive&&Date.now()-lastBuzz>80){lastBuzz=Date.now();navigator.vibrate(8)}
+  }
 });
 
 // ---- triple tap ----
@@ -271,15 +358,13 @@ function openEdit(){
   const snd=$('#snd'),sndLabel=()=>snd.textContent=soundOn?'Sounds: on (tap to mute)':'Sounds: off (tap to turn on)';
   sndLabel();snd.onclick=()=>{soundOn=!soundOn;store.set('cj_sound',soundOn);sndLabel();clink()};
   $('#save').onclick=()=>{
-    const prevFull=state.full;
     state.coins=val();state.full=Math.max(1,parseInt(fi.value)||100);
     store.set('cj_coins',state.coins);store.set('cj_full',state.full);
     close();
-    if(prevFull!==state.full){shownCoins=0;$('#coins').innerHTML=''}
-    render(true);
+    render();
   };
 }
-render(true);
+render('place');
 </script>
 </body>
 </html>
