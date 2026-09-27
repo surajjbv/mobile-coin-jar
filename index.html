@@ -107,7 +107,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 const $=s=>document.querySelector(s);
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
              set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-let state={coins:store.get('cj_coins',40),full:store.get('cj_full',100)};
+let state={coins:store.get('cj_coins',10),full:store.get('cj_full',100)};
 let pin=store.get('cj_pin',null);
 let shownCoins=0;
 
