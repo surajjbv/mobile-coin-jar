@@ -24,22 +24,33 @@ of the number warns when it's running low.
 
 ## How it works
 
-- **A jar of gold coins** with the count on top. One coin is drawn for each coin in the jar.
+- **A 3D glass jar of gold coins** with the count on top. One coin is drawn for each coin in the jar.
 - **Colour tells the story:** the number is red when the jar is ≤20% full, amber at 21–79%, and green at ≥80%.
-- **Real physics** ([Matter.js](https://brm.io/matter-js/)): tilt the phone and the coins slide, shake it
-  (or tap the jar) to toss them. The clinks come from actual collisions.
+- **Spending is visible:** when coins are taken out, the lid comes off and the coins float up out of the jar.
+  Adding coins pours them in through the neck.
+- **Real physics:** tilt the phone and the coins slide (lay it flat and they fall to the back of the jar),
+  shake it or tap the jar to toss them, and drag sideways to spin around the jar. The clinks come from actual collisions.
+- **Milestones:** confetti at 25%, 50% and 75%. When the jar fills, the lid pops and the coins jump.
+- **Jar label:** an optional emoji and caption, such as "📱 Money in the phone".
 - **Grown-ups only editing:** triple-tap the number, enter a 4-digit passcode (you set it the first time),
-  then change the coins and the "jar is full at" number (default 100).
-- **Private by design:** there is no account and no server. Everything is stored on the device in `localStorage`.
-- On iPhone, tap the jar once to allow motion access.
+  then change the coins, the "jar is full at" number (default 100) and the label.
+- **Private by design:** there is no account and no server. Everything, including where each coin lies, is stored
+  on the device in `localStorage`.
+- **Edge to edge on modern iPhones.** On iPhone, tap the jar once to allow motion access.
 
 ## Tech
 
-- A single `index.html` file (HTML, CSS, and vanilla JavaScript) with no build step.
-- SVG graphics, Web Audio for the synthesised coin sounds, and Matter.js for the physics.
-- Physics is capped at 300 drawn coins to keep older phones smooth (above that the jar fills
-  proportionally). The simulation sleeps when the coins are still to save battery.
-- Hosted on Netlify. Every push to `main` deploys automatically.
+- A single `index.html` with no build step. Libraries load from jsDelivr as ES modules.
+- [three.js](https://threejs.org/) renders the jar: physically based glass (transmission), metallic coins
+  with an embossed star, a beaded ring and a ridged edge (procedural canvas textures), and a studio environment map.
+- [Rapier](https://rapier.rs/) (WebAssembly) simulates every coin as a 3D cylinder. Gravity comes from the phone's
+  accelerometer, sign-calibrated against device orientation, because browsers disagree on it.
+- Coin size and thickness depend on the "full at" number, tuned by pouring each jar size in the simulation so a
+  full jar reaches the shoulder.
+- Up to 300 coins are drawn (above that the jar fills proportionally). The render loop stops as soon as the
+  coins are still, so an idle jar uses no battery.
+- The count, passcode and editing live in a plain script, so they keep working even if the 3D jar can't load.
+- Web Audio synthesises the coin sounds, and hosting is on Netlify: every push to `main` deploys automatically.
 
 ## Run locally
 
