@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FD0E0"/><stop offset="1" stop-color="#BFE6F0"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".55"/><stop offset=".25" stop-color="#FFFFFF" stop-opacity=".18"/>
+      <stop offset=".75" stop-color="#FFFFFF" stop-opacity=".12"/><stop offset="1" stop-color="#FFFFFF" stop-opacity=".45"/>
+    </linearGradient>
+    <linearGradient id="lid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E8574C"/><stop offset="1" stop-color="#B8322A"/></linearGradient>
+  </defs>
+  <rect width="180" height="180" fill="url(#bg)"/>
+  <ellipse cx="90" cy="158" rx="50" ry="6" fill="#0F2E3A" opacity=".16"/>
+  <!-- glass body: shoulders narrowing into the neck -->
+  <path d="M60 50 L60 56 Q42 62 42 80 L42 140 Q42 156 58 156 L122 156 Q138 156 138 140 L138 80 Q138 62 120 56 L120 50 Z"
+        fill="url(#glass)" stroke="#FFFFFF" stroke-opacity=".95" stroke-width="4" stroke-linejoin="round"/>
+  <!-- inner base line so it reads as an empty jar -->
+  <path d="M50 146 Q90 152 130 146" fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- highlights -->
+  <path d="M52 84 Q50 110 53 136" fill="none" stroke="#FFFFFF" stroke-opacity=".9" stroke-width="6" stroke-linecap="round"/>
+  <path d="M60 70 L60 72" fill="none" stroke="#FFFFFF" stroke-opacity=".9" stroke-width="6" stroke-linecap="round"/>
+  <path d="M127 92 Q129 112 127 128" fill="none" stroke="#FFFFFF" stroke-opacity=".5" stroke-width="3" stroke-linecap="round"/>
+  <!-- red screw lid with grip ridges -->
+  <rect x="52" y="26" width="76" height="28" rx="7" fill="url(#lid)"/>
+  <g stroke="#9E2A23" stroke-opacity=".55" stroke-width="2">
+    <path d="M60 31v18M67 31v18M74 31v18M81 31v18M88 31v18M95 31v18M102 31v18M109 31v18M116 31v18M123 31v18"/>
+  </g>
+  <rect x="58" y="29" width="26" height="4" rx="2" fill="#FFFFFF" opacity=".45"/>
+</svg>
