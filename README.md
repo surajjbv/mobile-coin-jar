@@ -46,6 +46,15 @@ of the number warns when it's running low.
 - **Android (Chrome):** open the site, tap **⋮**, then **Install app** (or **Add to Home screen**).
 - **Samsung Internet:** tap **☰**, then **Add page to**, then **Home screen**.
 
+## First-time setup
+
+1. **Triple-tap the number** at the top and create a 4-digit passcode that only grown-ups know.
+2. Set **"Jar is full at"** to whatever a full jar means for you (for example 100), and the **coins** to where you are now.
+3. Optionally add a **label**, such as "📱 Money in the phone".
+4. From then on: add coins when money comes in, take them out when you spend, and let your child watch the jar.
+
+It's free, with no ads and no sign-up, and nothing leaves the phone.
+
 ## Tech
 
 - A single `index.html` with no build step. Libraries load from jsDelivr as ES modules.
