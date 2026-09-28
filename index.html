@@ -144,13 +144,21 @@ window.jarReady=j=>{jar=j;$('#status').hidden=true;render()};
 window.jarFailed=()=>{$('#status').textContent='Couldn’t load the 3D jar. Check the internet connection and reopen the app.'};
 
 // ---- sound: real coin recordings (CC0, sounds/), with a synthesised fallback until they load ----
-let actx=null,lastClink=0,soundOn=store.get('cj_sound',true);
-function unlockAudio(){ // browsers only allow audio after a tap
-  if(!actx){const A=window.AudioContext||window.webkitAudioContext;if(!A)return;actx=new A()}
-  if(actx.state==='suspended')actx.resume();
+let actx=null,lastClink=0,soundOn=store.get('cj_sound',true),tiltOn=store.get('cj_tilt',true);
+// Browsers only start audio from a tap. iOS also 'interrupts' it when the app goes to the background or a system
+// pop-up (like the motion prompt) appears, and a context revived after that can stay silent. So on any tap, if the
+// audio isn't running (or the app has been away), start a fresh audio engine; the decoded recordings are reused.
+let audioStale=false;
+function unlockAudio(){
+  if(actx&&(audioStale||actx.state!=='running')){actx.close().catch(()=>{});actx=null;master=null}
+  audioStale=false;
+  if(!actx){const A=window.AudioContext||window.webkitAudioContext;if(!A)return;actx=new A();lastClink=0}
+  if(actx.state!=='running')actx.resume().catch(()=>{});
   loadSamples();
 }
 document.addEventListener('pointerdown',unlockAudio,{passive:true});
+document.addEventListener('touchend',unlockAudio,{passive:true}); // iOS is most willing to start audio on touchend
+document.addEventListener('visibilitychange',()=>{if(document.hidden)audioStale=true});
 let master=null;
 function out(){ // everything goes through a limiter so a big pour doesn't distort
   if(!master){master=actx.createDynamicsCompressor();master.threshold.value=-16;master.ratio.value=6;master.connect(actx.destination)}
@@ -315,6 +323,7 @@ function openEdit(){
   <div class="row"><input id="gi" type="text" maxlength="30" placeholder="e.g. Money in the phone" value="${esc(label.t)}"></div>
   <div class="actions"><button class="secondary" id="cancel">Cancel</button><button class="primary" id="save">Save</button></div>
   <button class="link" id="snd"></button>
+  <button class="link" id="tlt"></button>
   <button class="link" id="chg">Change passcode</button>`;
   scrim.classList.add('open');
   const ci=$('#ci'),fi=$('#fi');
@@ -329,6 +338,9 @@ function openEdit(){
   $('#chg').onclick=()=>openPin('change1');
   const snd=$('#snd'),sndLabel=()=>snd.textContent=soundOn?'Sounds & vibration: on (tap to turn off)':'Sounds & vibration: off (tap to turn on)';
   sndLabel();snd.onclick=()=>{soundOn=!soundOn;store.set('cj_sound',soundOn);sndLabel();clink()};
+  // iPhone asks for motion access every time the app is opened (Apple doesn't let sites keep it); this turns it off
+  const tlt=$('#tlt'),tltLabel=()=>tlt.textContent=tiltOn?'Tilt & shake: on (tap to turn off)':'Tilt & shake: off (tap to turn on)';
+  tltLabel();tlt.onclick=()=>{tiltOn=!tiltOn;store.set('cj_tilt',tiltOn);tltLabel();jar?.tilt(tiltOn)};
   $('#save').onclick=()=>{
     const before=state.full>0?state.coins/state.full*100:0,sameJar=Math.max(1,parseInt(fi.value)||100)===state.full;
     state.coins=val();state.full=Math.max(1,parseInt(fi.value)||100);
@@ -526,15 +538,17 @@ function applyGravity(){
   const moved=Math.hypot(nx-g.x,ny-g.y,nz-g.z)>.3;
   world.gravity={x:nx,y:ny,z:nz};if(moved){coins.forEach(b=>b.wakeUp());kick()}
 }
-function sensed(){$('#hint').hidden=true}
+let tiltWorked=store.get('cj_tilt_ok',false);
+function sensed(){if(!tiltWorked){tiltWorked=true;store.set('cj_tilt_ok',true);$('#hint').hidden=true}}
 addEventListener('deviceorientation',e=>{
-  if(e.beta==null||e.gamma==null)return;
+  if(!tiltOn||e.beta==null||e.gamma==null)return;
   const r=Math.PI/180,b=e.beta*r,g=e.gamma*r;
   orientG=new THREE.Vector3(Math.sin(g)*Math.cos(b),-Math.sin(b),-Math.cos(b)*Math.cos(g)); // "down" in device axes
   if(!usingAccel){devG.copy(orientG);applyGravity()}sensed();
 });
 let lastShake=0;
 addEventListener('devicemotion',e=>{
+  if(!tiltOn)return;
   const a=e.accelerationIncludingGravity,now=Date.now();
   if(a&&a.x!=null){
     const v=new THREE.Vector3(-a.x,-a.y,-a.z).divideScalar(9.81); // per spec a device at rest reports the upward reaction
@@ -546,11 +560,15 @@ addEventListener('devicemotion',e=>{
   if(m>14&&now-lastShake>300){lastShake=now;jolt(Math.min(1.6,m/14))}
 });
 const mustAsk=typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function';
-if(mustAsk)$('#hint').hidden=false;
-else if(navigator.maxTouchPoints>0&&'DeviceMotionEvent' in window){$('#hint').textContent='Tilt your phone! 📱';$('#hint').hidden=false} // Android: no tap needed; hides once the phone moves
-function askForTilt(){ // iPhone only lets a page read motion after a tap
-  if(!mustAsk)return;
-  DeviceOrientationEvent.requestPermission().catch(()=>{});
+// the hint only shows until motion has worked once on this phone
+if(tiltOn&&!store.get('cj_tilt_ok',false)){
+  if(mustAsk)$('#hint').hidden=false;
+  else if(navigator.maxTouchPoints>0&&'DeviceMotionEvent' in window){$('#hint').textContent='Tilt your phone! 📱';$('#hint').hidden=false}
+}
+let askedTilt=false;
+function askForTilt(){ // iPhone only lets a page read motion after a tap, and asks again each time the app is opened
+  if(!mustAsk||!tiltOn||askedTilt)return;askedTilt=true;
+  DeviceOrientationEvent.requestPermission().then(r=>{if(r!=='granted')askedTilt=false}).catch(()=>{askedTilt=false});
   if(typeof DeviceMotionEvent.requestPermission==='function')DeviceMotionEvent.requestPermission().catch(()=>{});
 }
 
@@ -653,7 +671,8 @@ C=sizeFor(Math.min(state.full,CAP));buildMesh();wanted=wantedCoins();restorePile
 fit();
 // test handle: step the scene by hand (browsers throttle animation frames in background tabs)
 window.__jar={world,coins:()=>coins,dbg:()=>({yaw:+yaw.toFixed(2),lidOpen,lidTarget,pending,flying:flying.length,lidPop,raf}),tick:n=>{for(let k=0;k<n;k++)frame(last+1000/60)},C:()=>C,setDevG:v=>{devG.set(v.x,v.y,v.z);applyGravity()},jolt};
-window.jarReady({update,celebrate(cb){party=cb;kick()}});
+window.jarReady({update,celebrate(cb){party=cb;kick()},
+  tilt(on){if(!on){devG.set(0,-1,0);usingAccel=false;accelSign=0;world.gravity={x:0,y:-G,z:0};coins.forEach(b=>b.wakeUp());kick()}}}); // tilt switched off: gravity back to straight down
 }catch(err){console.error(err);window.jarFailed()}
 </script>
 </body>

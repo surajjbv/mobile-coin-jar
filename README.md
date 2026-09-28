@@ -37,8 +37,9 @@ of the number warns when it's running low.
 - **Private by design:** there is no account and no server. Everything, including where each coin lies, is stored
   on the device in `localStorage`.
 - **Installs like an app** on iPhone and Android (Add to Home Screen) and **works offline** after the first visit.
-- **Edge to edge on modern phones.** On iPhone, tap the jar once to allow motion access; Android needs no tap
-  and also gives a little vibration on hard hits, shakes and milestones.
+- **Edge to edge on modern phones.** On iPhone, tap the jar to allow motion access. Apple asks again each time the
+  app is opened, and there's a grown-ups switch to turn tilt & shake off if you'd rather not see the prompt.
+  Android needs no tap and also gives a little vibration on hard hits, shakes and milestones.
 
 ## Add it to your phone
 
