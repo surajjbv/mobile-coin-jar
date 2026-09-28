@@ -1,0 +1,56 @@
+// Coin Jar offline support.
+// - The page itself: network first (so a push to main shows up straight away), falling back to the cached copy
+//   when offline or when the network is slow.
+// - Everything else (icons, sounds, fonts, the pinned three.js / Rapier builds): served from the cache, refreshed
+//   in the background.
+const CACHE = 'coin-jar-v1';
+const CDN = 'https://cdn.jsdelivr.net/npm/';
+const PRECACHE = [
+  './', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png',
+  ...['clink-1', 'clink-2', 'clink-3', 'clink-4', 'clink-5', 'bounce-1', 'bounce-2', 'bounce-3', 'bounce-4', 'jingle-1', 'jingle-2']
+    .map(n => `sounds/${n}.m4a`),
+  CDN + 'three@0.186.1/build/three.module.min.js',
+  CDN + 'three@0.186.1/build/three.core.js',
+  CDN + 'three@0.186.1/examples/jsm/environments/RoomEnvironment.js',
+  CDN + '@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs',
+];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys()
+    .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    .then(() => self.clients.claim()));
+});
+
+async function networkFirst(req) {
+  const cache = await caches.open(CACHE);
+  try {
+    const res = await Promise.race([fetch(req), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 4000))]);
+    if (res.ok) cache.put('./', res.clone());
+    return res;
+  } catch (e) {
+    return (await cache.match('./')) || Response.error();
+  }
+}
+
+async function cacheFirst(req) {
+  const cache = await caches.open(CACHE);
+  const hit = await cache.match(req);
+  const update = fetch(req).then(res => { if (res.ok || res.type === 'opaque') cache.put(req, res.clone()); return res; });
+  if (hit) { update.catch(() => {}); return hit; }
+  return update;
+}
+
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (req.mode === 'navigate' && url.origin === location.origin) return e.respondWith(networkFirst(req));
+  if (url.origin === location.origin || url.href.startsWith(CDN) ||
+      url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    e.respondWith(cacheFirst(req));
+  }
+});

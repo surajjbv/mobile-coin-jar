@@ -36,7 +36,15 @@ of the number warns when it's running low.
   then change the coins, the "jar is full at" number (default 100) and the label.
 - **Private by design:** there is no account and no server. Everything, including where each coin lies, is stored
   on the device in `localStorage`.
-- **Edge to edge on modern iPhones.** On iPhone, tap the jar once to allow motion access.
+- **Installs like an app** on iPhone and Android (Add to Home Screen) and **works offline** after the first visit.
+- **Edge to edge on modern phones.** On iPhone, tap the jar once to allow motion access; Android needs no tap
+  and also gives a little vibration on hard hits, shakes and milestones.
+
+## Add it to your phone
+
+- **iPhone (Safari):** open the site, tap **Share**, then **Add to Home Screen**.
+- **Android (Chrome):** open the site, tap **⋮**, then **Install app** (or **Add to Home screen**).
+- **Samsung Internet:** tap **☰**, then **Add page to**, then **Home screen**.
 
 ## Tech
 
@@ -52,6 +60,9 @@ of the number warns when it's running low.
 - The count, passcode and editing live in a plain script, so they keep working even if the 3D jar can't load.
 - Coin sounds are real recordings (a random clink per collision, a bounce for hard hits, a jingle for a shake),
   pitched and panned a little differently each time with Web Audio. Coins hitting the glass sound lower and softer.
+- Installable PWA: `manifest.webmanifest` with regular and maskable icons. A service worker (`sw.js`) precaches the
+  page, icons, sounds and the pinned library builds, so the app opens offline. The page itself is network-first,
+  so a new deploy shows up on the next open.
 - Hosting is on Netlify: every push to `main` deploys automatically.
 
 ## Credits

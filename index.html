@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#1A4757" media="(prefers-color-scheme: dark)">
 <title>Coin Jar</title>
 <meta name="apple-mobile-web-app-title" content="Coin Jar">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -217,6 +218,12 @@ function clink(vol=1,glass=false){ // glass: a coin hitting the jar rather than 
   coinStrike(actx,out(),t,1900+Math.random()*1100,.6+Math.random()*.5,.35*vol); // recordings not loaded yet
 }
 function jingle(strong){if(audible())play('jingle',strong?.7:.5,1)}
+// little vibrations on Android (iPhone doesn't let web pages vibrate); they follow the sound switch
+let lastBuzz=0;
+function buzz(pattern){
+  if(!soundOn||!navigator.vibrate||!(navigator.userActivation?.hasBeenActive??true))return;
+  const now=Date.now();if(now-lastBuzz<80)return;lastBuzz=now;navigator.vibrate(pattern);
+}
 function whoosh(){ // a coin leaving the jar
   if(!audible())return;const t=actx.currentTime;tone(t,900,.07,.22,'sine',260);
 }
@@ -250,7 +257,7 @@ function milestone(before,after){
   const crossed=[25,50,75,100].filter(m=>before<m&&after>=m);
   if(!crossed.length)return;
   const full=crossed.includes(100);
-  const party=()=>{confetti(full?260:90);fanfare(full)};
+  const party=()=>{confetti(full?260:90);fanfare(full);buzz(full?[40,60,40,60,120]:[30,50,30])};
   if(full&&jar)jar.celebrate(party);else setTimeout(party,500); // a full jar waits for the last coin and the lid
 }
 
@@ -320,7 +327,7 @@ function openEdit(){
   });
   $('#cancel').onclick=close;
   $('#chg').onclick=()=>openPin('change1');
-  const snd=$('#snd'),sndLabel=()=>snd.textContent=soundOn?'Sounds: on (tap to mute)':'Sounds: off (tap to turn on)';
+  const snd=$('#snd'),sndLabel=()=>snd.textContent=soundOn?'Sounds & vibration: on (tap to turn off)':'Sounds & vibration: off (tap to turn on)';
   sndLabel();snd.onclick=()=>{soundOn=!soundOn;store.set('cj_sound',soundOn);sndLabel();clink()};
   $('#save').onclick=()=>{
     const before=state.full>0?state.coins/state.full*100:0,sameJar=Math.max(1,parseInt(fi.value)||100)===state.full;
@@ -333,6 +340,8 @@ function openEdit(){
   };
 }
 render();
+// offline support: after the first visit the app opens with no internet (see sw.js)
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 
 <script type="importmap">
@@ -538,6 +547,7 @@ addEventListener('devicemotion',e=>{
 });
 const mustAsk=typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function';
 if(mustAsk)$('#hint').hidden=false;
+else if(navigator.maxTouchPoints>0&&'DeviceMotionEvent' in window){$('#hint').textContent='Tilt your phone! 📱';$('#hint').hidden=false} // Android: no tap needed; hides once the phone moves
 function askForTilt(){ // iPhone only lets a page read motion after a tap
   if(!mustAsk)return;
   DeviceOrientationEvent.requestPermission().catch(()=>{});
@@ -546,7 +556,7 @@ function askForTilt(){ // iPhone only lets a page read motion after a tap
 
 // ---- shake / tap: toss the coins against gravity ----
 function jolt(s=1){
-  if(coins.length)jingle(s>1.1);
+  if(coins.length){jingle(s>1.1);buzz(s>1.1?[18,40,18,40,18]:[15,30,15])}
   const up=upAxis();
   coins.forEach(b=>{const m=b.mass(),k=(2+Math.random()*4)*s;
     b.applyImpulse({x:(up.x*k+(Math.random()-.5)*3*s)*m,y:(up.y*k+(Math.random()-.5)*3*s)*m,z:(up.z*k+(Math.random()-.5)*3*s)*m},true);
@@ -595,6 +605,7 @@ function step(){
     if(!started)return;const b1=world.getCollider(h1).parent(),b2=world.getCollider(h2).parent();
     const v1=b1.linvel(),v2=b2.linvel(),s=Math.hypot(v1.x-v2.x,v1.y-v2.y,v1.z-v2.z);
     if(s>1.2)clink(Math.min(1,.2+s/8),b1.isFixed()||b2.isFixed());
+    if(s>5)buzz(8); // a hard hit
   });
 }
 function frame(now){
