@@ -143,9 +143,9 @@ const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.
 let state={coins:store.get('cj_coins',10),full:store.get('cj_full',100)};
 let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
-const CAP=300; // most coins drawn; above this each coin shown stands for more than one (keeps phones smooth)
+const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.01-2'; // shown in the grown-ups menu, to check a phone has the latest
+const APP_VERSION='2026.10.01-3'; // shown in the grown-ups menu, to check a phone has the latest
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -406,7 +406,7 @@ function openEdit(){
   <label for="ci">Coins in the jar</label>
   <div class="row"><button data-d="-1" aria-label="Remove one">−</button><input id="ci" type="number" inputmode="numeric" min="0" value="${state.coins}"><button data-d="1" aria-label="Add one">+</button></div>
   <div class="quick"><button data-s="0">Empty</button><button data-d="-10">−10</button><button data-d="10">+10</button><button data-s="full">Fill up</button></div>
-  <label for="fi">Jar is full at</label>
+  <label for="fi">Jar is full at <span style="font-size:13px">(up to 10,000 coins drawn; they get smaller as it grows)</span></label>
   <div class="row"><input id="fi" type="number" inputmode="numeric" min="1" value="${state.full}"></div>
   <label for="gi">Jar label (optional)</label>
   <div class="emojis">${EMOJI.map(e=>`<button data-e="${e}" class="${e===pick?'on':''}" aria-label="Use ${e}">${e}</button>`).join('')}</div>
@@ -537,7 +537,22 @@ let mesh=null,C={}; // C = current coin size for this jar
 
 // coin size for a jar that's full at N: few coins are big and chunky, many are smaller and thin.
 // Thickness is tuned so a full jar's worth fills to the shoulder once the coins tumble.
+// Jars up to PHYS coins: every coin is a physics body. Bigger jars: the bottom of the pile is a packed, still mass of
+// coins drawn on the GPU, and only the top PHYS coins are physics bodies, resting on an invisible floor at the top of
+// that mass (real piles behave like this too: tilt or shake one and only the top layer moves).
+const PHYS=300;
+const hash=i=>{const x=Math.sin(i*12.9898+78.233)*43758.5453;return x-Math.floor(x)};
+function hexSlots(r){ // where coins lie in one flat layer of the packed mass
+  const out=[],s=2*r*1.04,lim=R-r-.01;
+  for(let j=-20;j<=20;j++)for(let i=-20;i<=20;i++){const x=(i+(j&1)/2)*s,z=j*s*.866;if(Math.hypot(x,z)<=lim)out.push([x,z])}
+  return out;
+}
 function sizeFor(N){
+  if(N>PHYS){ // many coins: smaller (volume ~ 1/N) and thinner, packed in layers
+    const r=.3*Math.cbrt(PHYS/N),slots=hexSlots(r),M=slots.length,dy=TOP*.88/Math.ceil(N/M);
+    const h=Math.min(r*.45,.51*R*R*TOP*.9/(2*N*r*r)); // same packing rule as the physics coins at 300
+    return {N,r,h,big:true,slots,M,dy};
+  }
   const r=Math.max(.3,Math.min(.7,.98-.3*Math.log10(Math.max(N,1))));
   // how much of the jar the tumbled coins actually occupy, measured by pouring each jar size in the simulation
   const PACK=[[.7,.49],[1,.46],[1.5,.38],[1.7,.37],[2,.44],[2.3,.5],[2.48,.51]],x=Math.log10(Math.max(N,1));
@@ -546,12 +561,29 @@ function sizeFor(N){
   const h=Math.min(r*.45,Math.max(.012,pack*R*R*TOP*.9/(2*N*r*r)));
   return {N,r,h}; // h = half thickness
 }
+let packedMesh=null,packedMats=null; // the still mass at the bottom of big jars
 function buildMesh(){
   if(mesh){jarGroup.remove(mesh);mesh.geometry.dispose();mesh.dispose()}
-  mesh=new THREE.InstancedMesh(new THREE.CylinderGeometry(C.r,C.r,C.h*2,40,1),coinMats,CAP+80);
+  if(packedMesh){jarGroup.remove(packedMesh);packedMesh.dispose();packedMesh=null}
+  const geo=new THREE.CylinderGeometry(C.r,C.r,C.h*2,C.big?(C.r<.15?18:28):40,1);
+  mesh=new THREE.InstancedMesh(geo,coinMats,PHYS+200); // physics coins + coins flying out
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.count=0;mesh.frustumCulled=false;
-  for(let i=0;i<CAP+80;i++)mesh.setColorAt(i,TINTS[i%TINTS.length]);
+  for(let i=0;i<PHYS+200;i++)mesh.setColorAt(i,TINTS[i%TINTS.length]);
   jarGroup.add(mesh);
+  if(!C.big)return;
+  packedMesh=new THREE.InstancedMesh(geo,coinMats,C.N);packedMesh.count=0;packedMesh.frustumCulled=false;
+  for(let i=0;i<C.N;i++)packedMesh.setColorAt(i,TINTS[i%TINTS.length]);
+  jarGroup.add(packedMesh);
+  // every packed coin's place, worked out once: layer by layer, each layer turned and jittered, coins tilted so it reads as a pile
+  packedMats=new Float32Array(C.N*16);const e=new THREE.Euler();
+  for(let i=0;i<C.N;i++){
+    const L=Math.floor(i/C.M),[sx,sz]=C.slots[i%C.M],a=hash(L*7.1)*6.283,c=Math.cos(a),sn=Math.sin(a);
+    let x=sx*c-sz*sn+(hash(i*3.3)-.5)*.5*C.r,z=sx*sn+sz*c+(hash(i*4.4)-.5)*.5*C.r;
+    const d=Math.hypot(x,z),lim=R-C.r-.01;if(d>lim){x*=lim/d;z*=lim/d}
+    tmpP.set(x,(L+.5)*C.dy+(hash(i*5.7)-.5)*.3*C.dy,z);
+    tmpQ.setFromEuler(e.set((hash(i*1.3)-.5)*.6,hash(i*2.9)*6.283,(hash(i*6.1)-.5)*.6));tmpS.set(1,1,1);
+    tmpM.compose(tmpP,tmpQ,tmpS).toArray(packedMats,i*16);
+  }
 }
 
 // ---- physics world: floor, walls, shoulder ring, neck and a lid "plug" that opens to let coins in and out ----
@@ -593,17 +625,55 @@ function takeOut(n){ // the coins nearest the top (against gravity) float up out
   coins.forEach(b=>b.wakeUp());
 }
 
+// ---- the packed mass (big jars only) ----
+let packed=0,packedShown=0,packedFloor=null,packedDrawn=-1; // packed: how many coins it holds; packedShown: animating toward it
+const packedTop=n=>C.big?n/C.M*C.dy:0;
+function drawPacked(n){ // only coins that can be seen: against the glass, or in the top few layers
+  if(!packedMesh)return;n=Math.round(n);if(n===packedDrawn)return;packedDrawn=n;
+  const topL=Math.floor((n-1)/C.M),edge=R-C.r*3.2;let j=0;
+  for(let i=0;i<n;i++){
+    const o=i*16;
+    if(Math.floor(i/C.M)>=topL-2||Math.hypot(packedMats[o+12],packedMats[o+14])>edge){tmpM.fromArray(packedMats,o);packedMesh.setMatrixAt(j++,tmpM)}
+  }
+  packedMesh.count=j;packedMesh.instanceMatrix.needsUpdate=true;
+}
+function setFloor(n){ // the physics coins rest on the top of the packed mass
+  if(packedFloor){world.removeCollider(packedFloor,false);packedFloor=null}
+  const top=packedTop(n);
+  if(top>.001)packedFloor=world.createCollider(RAPIER.ColliderDesc.cylinder(top/2,R-.02).setTranslation(0,top/2,0).setFriction(.3),ground);
+  coins.forEach(b=>b.wakeUp());
+}
+function setPacked(n){packed=packedShown=n;drawPacked(n);setFloor(n)}
+function freeze(k){ // the lowest physics coins become part of the packed mass
+  const up=upAxis();
+  coins.sort((a,b)=>{const pa=a.translation(),pb=b.translation();return (pa.x*up.x+pa.y*up.y+pa.z*up.z)-(pb.x*up.x+pb.y*up.y+pb.z*up.z)});
+  coins.splice(0,k).forEach(b=>world.removeRigidBody(b));
+  setPacked(packed+k);
+}
+function thaw(k){ // the top of the packed mass becomes physics coins again (so there's always a layer to tilt)
+  k=Math.min(k,packed);if(!k)return;
+  const top=packedTop(packed-k);setPacked(packed-k);
+  for(let i=0;i<k;i++){const [x,z]=C.slots[i%C.M];addBody({x,y:top+C.h*2+Math.floor(i/C.M)*C.h*3,z},randomRot(.3))}
+}
+function rebalance(){ // when the jar is still: keep about PHYS coins moving, the rest packed
+  if(!C.big)return false;
+  if(coins.length>PHYS){freeze(coins.length-PHYS);return true}
+  if(coins.length<100&&packed>0){thaw(Math.min(packed,180-coins.length));return true}
+  return false;
+}
+
 // ---- keep the pile between visits: save where every coin lies once they're all still ----
 let saveTimer=0;
 function savePile(){
   clearTimeout(saveTimer);saveTimer=setTimeout(()=>{
     const d=[];coins.forEach(b=>{const p=b.translation(),r=b.rotation();d.push(...[p.x,p.y,p.z,r.x,r.y,r.z,r.w].map(v=>+v.toFixed(4)))});
-    store.set('cj_pile',{N:C.N,d});
+    store.set('cj_pile',{N:C.N,packed,d});
   },400);
 }
 function restorePile(){
   const s=store.get('cj_pile',null);if(!s||s.N!==C.N)return;
-  for(let i=0;i+6<s.d.length&&coins.length<wanted;i+=7){const d=s.d;addBody({x:d[i],y:d[i+1],z:d[i+2]},{x:d[i+3],y:d[i+4],z:d[i+5],w:d[i+6]})}
+  if(C.big)setPacked(Math.min(s.packed||0,wanted));
+  for(let i=0;i+6<s.d.length&&coins.length+packed<wanted;i+=7){const d=s.d;addBody({x:d[i],y:d[i+1],z:d[i+2]},{x:d[i+3],y:d[i+4],z:d[i+5],w:d[i+6]})}
 }
 
 // ---- lid: opens while coins go in or out ----
@@ -703,12 +773,21 @@ function reachArm(o,target,blend){
 function update(n,N){
   if(window.officerNext){window.officerNext=false;if(C.N===N)startOfficer()} // a deposit: the officer brings it (even when it's too small to add a drawn coin)
   if(C.N!==N){ // a different jar size: start again with coins sized for it
-    coins.forEach(b=>world.removeRigidBody(b));coins=[];flying=[];pending=0;C=sizeFor(N);buildMesh();wanted=n;restorePile();
+    coins.forEach(b=>world.removeRigidBody(b));coins=[];flying=[];pending=0;C=sizeFor(N);buildMesh();setPacked(0);packedDrawn=-1;
+    wanted=n;restorePile();
+    if(C.big&&!coins.length&&!packed)setPacked(Math.max(0,n-PHYS)); // a fresh big jar: start packed, pour the top layer
   }
   wanted=n;
-  const have=coins.length+pending;
-  if(wanted>have)pending+=wanted-have;
-  else if(wanted<have){const drop=Math.min(pending,have-wanted);pending-=drop;if(have-drop>wanted)takeOut(have-drop-wanted)}
+  const have=coins.length+pending+packed;
+  if(wanted>have){
+    const add=wanted-have,pour=C.big?Math.min(add,150):add; // big deposits: 150 coins pour in, the packed level rises for the rest
+    pending+=pour;packed+=add-pour;
+  }else if(wanted<have){
+    let take=have-wanted;const p=Math.min(pending,take);pending-=p;take-=p;
+    if(C.big&&take>60){const fromPacked=Math.min(packed,take-60);packed-=fromPacked;take-=fromPacked} // ~60 fly out, the level drops for the rest
+    if(take>coins.length)thaw(take-coins.length);
+    if(take>0)takeOut(Math.min(take,coins.length));
+  }
   kick();
 }
 
@@ -795,7 +874,7 @@ function fit(){
 new ResizeObserver(fit).observe(canvas);document.fonts?.ready.then(fit);addEventListener('orientationchange',()=>setTimeout(fit,300));
 
 // ---- main loop: runs only while something moves, so an idle jar uses no battery ----
-let raf=0,last=0,acc=0,quiet=0;
+let raf=0,last=0,acc=0,calmT=0,calmWins=0,calmSnap=null;
 function kick(){if(!raf){last=performance.now();raf=requestAnimationFrame(frame)}}
 function step(){
   simTime+=1/60;
@@ -816,6 +895,11 @@ function frame(now){
   const busy=pending>0||flying.length>0||coins.some(b=>b.translation().y>TOP+.02); // coins still in the neck
   lidTarget=busy&&!hold?1:0;
   officerUpdate(dt);
+  if(packedShown!==packed&&!hold){ // the packed level rises or falls smoothly
+    const diff=packed-packedShown,stepN=Math.max(C.M*4,Math.abs(diff)/1.5)*dt;
+    packedShown=Math.abs(diff)<=stepN?packed:packedShown+Math.sign(diff)*stepN;
+    if(Math.round(packedShown)!==packedDrawn){drawPacked(packedShown);setFloor(packedShown)}
+  }
   const officerOn=officer&&officer.state!=='off',zoomTo=officerOn?1.6:1; // pull back so he fits in the picture
   zoom+=(zoomTo-zoom)*Math.min(1,dt*2.5);
   lidOpen+=(lidTarget-lidOpen)*Math.min(1,dt*6);
@@ -845,21 +929,27 @@ function frame(now){
     const s=t<.75?1:1-(t-.75)/.25;tmpS.set(s,s,s);mesh.setMatrixAt(i++,tmpM.compose(tmpP,tmpQ,tmpS));
   }
   mesh.count=i;mesh.instanceMatrix.needsUpdate=true;
-  // big piles jitter just enough that the engine never sleeps them; once everything is nearly still, sleep it ourselves
+  // piles keep jittering a hair forever, so the engine never sleeps them: if no coin has moved visibly
+  // (more than ~2 px) over two half-second windows in a row, put the whole pile to sleep ourselves
   if(!busy&&coins.length&&!coins[0].isSleeping()){
-    let fast=0;for(const b of coins){const v=b.linvel(),w=b.angvel();fast=Math.max(fast,Math.hypot(v.x,v.y,v.z)+Math.hypot(w.x,w.y,w.z)*C.r)}
-    quiet=fast<.25?quiet+1:0;if(quiet>45){coins.forEach(b=>b.sleep());quiet=0}
-  }
+    calmT+=dt;
+    if(calmT>=.5){
+      calmT=0;const pos=coins.map(b=>{const p=b.translation();return [p.x,p.y,p.z]});
+      if(calmSnap&&calmSnap.length===pos.length){let m=0;pos.forEach((p,k)=>{m=Math.max(m,Math.hypot(p[0]-calmSnap[k][0],p[1]-calmSnap[k][1],p[2]-calmSnap[k][2]))});calmWins=m<.02?calmWins+1:0}
+      calmSnap=pos;
+      if(calmWins>=2){coins.forEach(b=>b.sleep());calmWins=0;calmSnap=null}
+    }
+  }else{calmT=0;calmWins=0;calmSnap=null}
   renderer.render(scene,camera);
-  const moving=coins.some(b=>!b.isSleeping())||busy||party||officerOn||Math.abs(zoom-zoomTo)>.002||drag||Math.abs(yawVel)>.0005||Math.abs(lidOpen-lidTarget)>.01||lidPop>0||wiggle>0;
-  if(moving)raf=requestAnimationFrame(frame);else{raf=0;savePile()}
+  const moving=coins.some(b=>!b.isSleeping())||busy||party||officerOn||packedShown!==packed||Math.abs(zoom-zoomTo)>.002||drag||Math.abs(yawVel)>.0005||Math.abs(lidOpen-lidTarget)>.01||lidPop>0||wiggle>0;
+  if(moving||rebalance())raf=requestAnimationFrame(frame);else{raf=0;savePile()}
 }
 
 C=sizeFor(Math.min(state.full,CAP));buildMesh();wanted=wantedCoins();restorePile();
 fit();
 setTimeout(loadOfficer,1200); // after the jar is up, so he never slows the first paint
 // test handle: step the scene by hand (browsers throttle animation frames in background tabs)
-window.__jar={world,THREE,officerObj:()=>officer,coins:()=>coins,officer:()=>officer&&{state:officer.state,x:+officer.grp.position.x.toFixed(2),hold,zoom:+zoom.toFixed(2),anims:Object.keys(officer.actions)},dbg:()=>({yaw:+yaw.toFixed(2),lidOpen,lidTarget,pending,flying:flying.length,lidPop,raf}),tick:n=>{for(let k=0;k<n;k++)frame(last+1000/60)},C:()=>C,setDevG:v=>{devG.set(v.x,v.y,v.z);applyGravity()},jolt};
+window.__jar={world,THREE,officerObj:()=>officer,coins:()=>coins,officer:()=>officer&&{state:officer.state,x:+officer.grp.position.x.toFixed(2),hold,zoom:+zoom.toFixed(2),anims:Object.keys(officer.actions)},dbg:()=>({packed,packedShown,hold,yaw:+yaw.toFixed(2),lidOpen,lidTarget,pending,flying:flying.length,lidPop,raf}),tick:n=>{for(let k=0;k<n;k++)frame(last+1000/60)},C:()=>C,setDevG:v=>{devG.set(v.x,v.y,v.z);applyGravity()},jolt};
 window.jarReady({update,celebrate(cb){party=cb;kick()},
   tilt(on){if(!on){devG.set(0,-1,0);usingAccel=false;accelSign=0;world.gravity={x:0,y:-G,z:0};coins.forEach(b=>b.wakeUp());kick()}}}); // tilt switched off: gravity back to straight down
 }catch(err){console.error(err);window.jarFailed()}

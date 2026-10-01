@@ -70,8 +70,13 @@ It's free, with no ads and no sign-up, and nothing leaves the phone.
   accelerometer, sign-calibrated against device orientation, because browsers disagree on it.
 - Coin size and thickness depend on the "full at" number, tuned by pouring each jar size in the simulation so a
   full jar reaches the shoulder.
-- Up to 300 coins are drawn (above that the jar fills proportionally). The render loop stops as soon as the
-  coins are still, so an idle jar uses no battery.
+- **Up to 10,000 coins are drawn**, getting smaller (and thinner) as "full at" grows, so a full jar always reaches the
+  shoulder. Up to 300 coins, every coin is a physics body. Above that, the bottom of the pile is a packed, still mass
+  drawn with GPU instancing (only coins against the glass or near the top are drawn), and the top ~150–300 coins are
+  physics bodies resting on an invisible floor at its top, just like a real pile, where only the top layer moves.
+  Big deposits and payments pour or fly ~150/60 coins and raise or lower the packed level for the rest. Above 10,000,
+  the jar fills proportionally.
+- The render loop stops once no coin has visibly moved for a second, so an idle jar uses no battery.
 - The count, passcode and editing live in a plain script, so they keep working even if the 3D jar can't load.
 - The officer (`officer.glb`, ~0.9 MB) loads after the jar is up. If he can't load, coins simply pour in.
 - Coin sounds are real recordings (a random clink per collision, a bounce for hard hits, a jingle for a shake),
