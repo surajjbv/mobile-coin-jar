@@ -51,7 +51,19 @@ main{position:fixed;left:0;top:0;width:100vw;height:100dvh;pointer-events:none;z
 #label{margin-top:6px;padding:4px 14px;border-radius:999px;background:color-mix(in srgb,var(--sheet) 55%,transparent);
   font-size:18px;font-weight:700;max-width:88vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #status{margin:auto;font-size:18px;font-weight:600;color:var(--muted);text-align:center;max-width:320px}
-#hint{margin-top:auto;font-size:16px;font-weight:600;color:var(--muted)}
+#bottom{margin-top:auto;width:100%;display:flex;flex-direction:column;align-items:center;gap:8px}
+#hint{font-size:16px;font-weight:600;color:var(--muted)}
+/* pay bar: open to everyone; adding asks for a grown-up */
+#bar{pointer-events:auto;width:100%;max-width:440px;display:flex;gap:8px;align-items:center;padding:6px;border-radius:24px;
+  background:color-mix(in srgb,var(--sheet) 70%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+#bar input{flex:1;min-width:0;height:52px;border-radius:18px;border:2px solid var(--sky2);background:var(--sheet);color:var(--ink);
+  font:inherit;font-size:24px;font-weight:700;text-align:center}
+#bar button{height:52px;border:0;border-radius:18px;padding:0 16px;font:inherit;font-size:20px;font-weight:800;color:#fff;white-space:nowrap}
+#pay{background:#D8443A}#add{background:#23823A}
+#bar.shake{animation:shake .35s}
+.float{position:fixed;z-index:4;pointer-events:none;font-weight:800;font-size:44px;animation:floatUp 1.5s ease-out forwards}
+.float.out{color:var(--red)}.float.in{color:var(--green)}
+@keyframes floatUp{from{opacity:1;transform:translate(-50%,0) scale(1.1)}to{opacity:0;transform:translate(-50%,-80px) scale(.9)}}
 @media (prefers-reduced-motion:reduce){#count.bump{animation:none}}
 
 /* sheet */
@@ -110,7 +122,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
     <div id="label" hidden></div>
   </div>
   <div id="status">Filling the jar…</div>
-  <div id="hint" hidden>Tap the jar, then tilt your phone! 📱</div>
+  <div id="bottom">
+    <div id="hint" hidden>Tap the jar, then tilt your phone! 📱</div>
+    <form id="bar" autocomplete="off">
+      <input id="amt" type="number" inputmode="numeric" min="1" placeholder="Amount" aria-label="Amount to pay">
+      <button id="pay" type="submit">Pay 💸</button>
+      <button id="add" type="button" aria-label="Add coins (grown-ups only)">＋ Add</button>
+    </form>
+  </div>
 </main>
 
 <div class="scrim" id="scrim"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
@@ -269,12 +288,84 @@ function milestone(before,after){
   if(full&&jar)jar.celebrate(party);else setTimeout(party,500); // a full jar waits for the last coin and the lid
 }
 
-// ---- triple tap ----
+// ---- grown-up check: Face ID / fingerprint (a passkey on this phone) first, the app passcode as backup ----
+// There's no server, so this is a gate for little hands rather than bank-grade security: we trust the phone's own
+// "user verified" flag instead of checking a signature.
+let bioId=store.get('cj_bio',null),afterAuth=()=>openEdit();
+const b64=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))),unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function bioAvailable(){
+  try{return !!window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()}catch(e){return false}
+}
+async function bioEnroll(){
+  const cred=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),
+    rp:{name:'Coin Jar'},user:{id:crypto.getRandomValues(new Uint8Array(16)),name:'Coin Jar grown-up',displayName:'Coin Jar grown-up'},
+    pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+    authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
+    timeout:60000,attestation:'none'}});
+  bioId=b64(cred.rawId);store.set('cj_bio',bioId);
+}
+async function bioCheck(){
+  const a=await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),
+    allowCredentials:[{type:'public-key',id:unb64(bioId),transports:['internal']}],userVerification:'required',timeout:60000}});
+  return !!(new Uint8Array(a.response.authenticatorData)[32]&4); // flags byte, bit 2 = user verified
+}
+function requireGrownUp(next){ // call straight from a tap: phones only show Face ID in response to one
+  afterAuth=next;
+  if(!pin)return openPin('set1'); // first time: create the backup passcode
+  if(bioId&&window.PublicKeyCredential){bioCheck().then(ok=>ok?next():openPin('enter')).catch(()=>openPin('enter'));return}
+  openPin('enter');
+}
+
+// ---- triple tap the number: all the grown-up settings ----
 let taps=[];
 $('#count').addEventListener('click',()=>{
   const now=Date.now();taps=taps.filter(t=>now-t<700);taps.push(now);
-  if(taps.length>=3){taps=[];openPin(pin?'enter':'set1')}
+  if(taps.length>=3){taps=[];requireGrownUp(()=>openEdit())}
 });
+
+// ---- pay (anyone) and add (grown-ups) ----
+const pctFull=()=>state.full>0?state.coins/state.full*100:0;
+function floatText(txt,out){ // "−25" / "+10" drifting up from the count
+  const r=$('#num').getBoundingClientRect(),f=document.createElement('div');
+  f.className='float '+(out?'out':'in');f.textContent=txt;f.style.left=(r.left+r.width/2)+'px';f.style.top=(r.bottom+4)+'px';
+  document.body.appendChild(f);setTimeout(()=>f.remove(),1600);
+}
+function changeCoins(delta){
+  const before=pctFull();
+  state.coins=Math.max(0,state.coins+delta);store.set('cj_coins',state.coins);render();
+  floatText((delta<0?'−':'+')+Math.abs(delta).toLocaleString(),delta<0);
+  if(delta>0)milestone(before,pctFull());
+}
+function shakeBar(){const b=$('#bar');b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake')}
+function openConfirm(title,note,yesLabel,yes){
+  sheet.innerHTML=`<h2>${title}</h2><p class="hint">${note}</p>
+  <div class="actions">${yes?'<button class="secondary" id="no">No</button>':''}<button class="primary" id="yes" ${yes?'style="background:#D8443A;color:#fff"':''}>${yesLabel}</button></div>`;
+  scrim.classList.add('open');
+  if(yes)$('#no').onclick=close;
+  $('#yes').onclick=()=>{close();yes&&yes()};
+}
+$('#bar').addEventListener('submit',e=>{
+  e.preventDefault();const amt=$('#amt'),n=parseInt(amt.value);amt.blur();
+  if(!(n>0))return shakeBar();
+  if(state.coins===0)return openConfirm('The jar is empty! 🫙','There are no coins left to pay with','OK');
+  const take=Math.min(n,state.coins),s=take===1?'':'s';
+  openConfirm(n>state.coins?`Only ${state.coins} coin${s} left`:`Pay ${take.toLocaleString()} coin${s}?`,
+    n>state.coins?`Pay all ${state.coins.toLocaleString()} coin${s}?`:'Watch them leave the jar 👀','Yes, pay 💸',
+    ()=>{amt.value='';changeCoins(-take)});
+});
+$('#add').addEventListener('click',()=>{const n=parseInt($('#amt').value);requireGrownUp(()=>openAdd(n>0?n:''))});
+function openAdd(prefill){
+  sheet.innerHTML=`<h2>Add coins</h2><p class="hint">Money came in? Pour it into the jar 🪙</p>
+  <div class="row"><input id="ai" type="number" inputmode="numeric" min="1" placeholder="How many?" value="${prefill}"></div>
+  <div class="quick"><button data-a="1">+1</button><button data-a="5">+5</button><button data-a="10">+10</button><button data-a="50">+50</button></div>
+  <div class="actions"><button class="secondary" id="cancel">Cancel</button><button class="primary" id="addgo">Add</button></div>
+  <button class="link" id="more">More settings</button>`;
+  scrim.classList.add('open');
+  const ai=$('#ai');
+  sheet.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>ai.value=(parseInt(ai.value)||0)+ +b.dataset.a);
+  $('#cancel').onclick=close;$('#more').onclick=()=>openEdit();
+  $('#addgo').onclick=()=>{const n=parseInt(ai.value);if(!(n>0))return ai.focus();close();$('#amt').value='';changeCoins(n)};
+}
 
 // ---- sheet ----
 const scrim=$('#scrim'),sheet=$('#sheet');
@@ -303,10 +394,10 @@ function fail(msg,next){const d=$('#dots');d.classList.add('shake');setTimeout((
 function done(){
   if(mode==='set1'||mode==='change1'){firstPin=entry;openPin(mode==='set1'?'set2':'change2')}
   else if(mode==='set2'||mode==='change2'){
-    if(entry===firstPin){pin=entry;store.set('cj_pin',pin);openEdit()}
+    if(entry===firstPin){pin=entry;store.set('cj_pin',pin);mode==='change2'?openEdit():afterAuth()}
     else fail('Those didn’t match. Try again.',mode==='set2'?'set1':'change1');
   }
-  else if(mode==='enter'){entry===pin?openEdit():fail('Wrong passcode. Try again.','enter')}
+  else if(mode==='enter'){entry===pin?afterAuth():fail('Wrong passcode. Try again.','enter')}
 }
 const EMOJI=['📱','💰','🚲','🧸','🎮','⚽','🎁','🏖️'];
 const esc=s=>s.replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
@@ -324,6 +415,7 @@ function openEdit(){
   <div class="actions"><button class="secondary" id="cancel">Cancel</button><button class="primary" id="save">Save</button></div>
   <button class="link" id="snd"></button>
   <button class="link" id="tlt"></button>
+  <button class="link" id="bio" hidden></button>
   <button class="link" id="chg">Change passcode</button>`;
   scrim.classList.add('open');
   const ci=$('#ci'),fi=$('#fi');
@@ -341,6 +433,12 @@ function openEdit(){
   // iPhone asks for motion access every time the app is opened (Apple doesn't let sites keep it); this turns it off
   const tlt=$('#tlt'),tltLabel=()=>tlt.textContent=tiltOn?'Tilt & shake: on (tap to turn off)':'Tilt & shake: off (tap to turn on)';
   tltLabel();tlt.onclick=()=>{tiltOn=!tiltOn;store.set('cj_tilt',tiltOn);tltLabel();jar?.tilt(tiltOn)};
+  const bio=$('#bio'),bioLabel=t=>bio.textContent=t||(bioId?'Face ID / fingerprint: on (tap to turn off)':'Face ID / fingerprint: off (tap to set up)');
+  bioAvailable().then(ok=>{bio.hidden=!ok;bioLabel()});
+  bio.onclick=()=>{
+    if(bioId){bioId=null;store.set('cj_bio',null);return bioLabel()}
+    bioEnroll().then(()=>bioLabel()).catch(()=>bioLabel('Couldn\u2019t set up Face ID / fingerprint. Tap to try again'));
+  };
   $('#save').onclick=()=>{
     const before=state.full>0?state.coins/state.full*100:0,sameJar=Math.max(1,parseInt(fi.value)||100)===state.full;
     state.coins=val();state.full=Math.max(1,parseInt(fi.value)||100);
@@ -539,7 +637,7 @@ function applyGravity(){
   world.gravity={x:nx,y:ny,z:nz};if(moved){coins.forEach(b=>b.wakeUp());kick()}
 }
 let tiltWorked=store.get('cj_tilt_ok',false);
-function sensed(){if(!tiltWorked){tiltWorked=true;store.set('cj_tilt_ok',true);$('#hint').hidden=true}}
+function sensed(){if(!tiltWorked){tiltWorked=true;store.set('cj_tilt_ok',true);$('#hint').hidden=true;fit()}}
 addEventListener('deviceorientation',e=>{
   if(!tiltOn||e.beta==null||e.gamma==null)return;
   const r=Math.PI/180,b=e.beta*r,g=e.gamma*r;
@@ -600,7 +698,7 @@ canvas.addEventListener('pointerup',()=>{
 function fit(){
   const W=canvas.clientWidth,H=canvas.clientHeight;if(!W||!H)return;
   renderer.setSize(W,H,false);camera.aspect=W/H;
-  const top=$('#top').getBoundingClientRect().bottom+12,hint=$('#hint'),bottom=(hint.hidden?innerHeight-20:hint.getBoundingClientRect().top-8);
+  const top=$('#top').getBoundingClientRect().bottom+12,bottom=$('#bottom').getBoundingClientRect().top-8; // between the count and the pay bar
   const avail=Math.max(120,bottom-top),t=Math.tan(camera.fov*Math.PI/360);
   const dist=Math.max(3.9/(2*t)*(H/avail),2.7/(2*t*camera.aspect)/.9);
   camera.userData.dist=dist;

@@ -32,8 +32,11 @@ of the number warns when it's running low.
   shake it or tap the jar to toss them, and drag sideways to spin around the jar. The clinks come from actual collisions.
 - **Milestones:** confetti at 25%, 50% and 75%. When the jar fills, the lid pops and the coins jump.
 - **Jar label:** an optional emoji and caption, such as "📱 Money in the phone".
-- **Grown-ups only editing:** triple-tap the number, enter a 4-digit passcode (you set it the first time),
-  then change the coins, the "jar is full at" number (default 100) and the label.
+- **Pay bar:** type an amount and tap **Pay 💸**. After a quick "Pay 25 coins?" check, the coins fly out of the jar
+  and "−25" floats up from the count, so a child can see the money leave. Anyone can pay.
+- **Adding is for grown-ups:** **＋ Add** (and triple-tapping the number for all settings) asks for **Face ID / Touch ID /
+  fingerprint**, with a 4-digit app passcode as the backup. Face ID is switched on once in the grown-ups menu; it
+  uses a passkey stored on the phone. With no server it's a gate for little hands, not bank-grade security.
 - **Private by design:** there is no account and no server. Everything, including where each coin lies, is stored
   on the device in `localStorage`.
 - **Installs like an app** on iPhone and Android (Add to Home Screen) and **works offline** after the first visit.
@@ -52,7 +55,8 @@ of the number warns when it's running low.
 1. **Triple-tap the number** at the top and create a 4-digit passcode that only grown-ups know.
 2. Set **"Jar is full at"** to whatever a full jar means for you (for example 100), and the **coins** to where you are now.
 3. Optionally add a **label**, such as "📱 Money in the phone".
-4. From then on: add coins when money comes in, take them out when you spend, and let your child watch the jar.
+4. Optionally turn on **Face ID / fingerprint** in the same menu, so adding coins doesn't need the passcode.
+5. From then on: **＋ Add** when money comes in, type the amount and **Pay** when you spend, and let your child watch the jar.
 
 It's free, with no ads and no sign-up, and nothing leaves the phone.
 
