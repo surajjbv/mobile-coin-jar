@@ -51,7 +51,11 @@ main{position:fixed;left:0;top:0;width:100vw;height:100dvh;pointer-events:none;z
 #label{margin-top:6px;padding:4px 14px;border-radius:999px;background:color-mix(in srgb,var(--sheet) 55%,transparent);
   font-size:18px;font-weight:700;max-width:88vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #status{margin:auto;font-size:18px;font-weight:600;color:var(--muted);text-align:center;max-width:320px}
-#bottom{margin-top:auto;width:100%;display:flex;flex-direction:column;align-items:center;gap:8px}
+#vignette{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:0;transition:opacity .9s;
+  background:radial-gradient(ellipse at 50% 45%,transparent 42%,rgba(0,0,0,.6) 100%)}
+body.cinema #vignette{opacity:1}
+body.cinema #bottom{opacity:0;pointer-events:none}body.cinema #bar{pointer-events:none}
+#bottom{transition:opacity .6s;margin-top:auto;width:100%;display:flex;flex-direction:column;align-items:center;gap:8px}
 #hint{font-size:16px;font-weight:600;color:var(--muted)}
 /* pay bar: open to everyone; adding asks for a grown-up */
 #bar{pointer-events:auto;width:100%;max-width:440px;display:flex;gap:8px;align-items:center;padding:6px;border-radius:24px;
@@ -108,6 +112,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 <div id="tint" aria-hidden="true"></div>
 <canvas id="scene" aria-label="A glass jar of gold coins. Tap to shake it, drag to spin it."></canvas>
 <canvas id="fx" aria-hidden="true"></canvas>
+<div id="vignette" aria-hidden="true"></div>
 <main>
   <div id="top">
     <button id="count" aria-label="Coin count. Triple-tap to edit"><svg class="c" viewBox="-20 -20 40 40" aria-hidden="true">
@@ -145,7 +150,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.01-3'; // shown in the grown-ups menu, to check a phone has the latest
+const APP_VERSION='2026.10.01-4'; // shown in the grown-ups menu, to check a phone has the latest
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -180,7 +185,7 @@ function unlockAudio(){
 document.addEventListener('pointerdown',unlockAudio,{passive:true});
 document.addEventListener('touchend',unlockAudio,{passive:true}); // iOS is most willing to start audio on touchend
 document.addEventListener('visibilitychange',()=>{if(document.hidden)audioStale=true});
-let master=null;
+let master=null,noiseBuf=null;
 function out(){ // everything goes through a limiter so a big pour doesn't distort
   if(!master){master=actx.createDynamicsCompressor();master.threshold.value=-16;master.ratio.value=6;master.connect(actx.destination)}
   return master;
@@ -197,7 +202,6 @@ const audible=()=>soundOn&&actx&&actx.state==='running';
 // slightly detuned modes, which beat against each other: that shimmer is what makes it sound like metal, not a beep.
 // Higher modes die away faster; a short band-passed noise burst gives the "chk" of the strike itself.
 const COIN_MODES=[[1,1,1],[1.73,.55,.7],[2.33,.5,.55],[3.91,.3,.4],[4.11,.26,.35],[6.3,.14,.22]]; // [ratio, level, decay]
-let noiseBuf=null;
 function coinStrike(ctx,dest,t,f,len,vol){
   if(!noiseBuf||noiseBuf.sampleRate!==ctx.sampleRate){
     noiseBuf=ctx.createBuffer(1,Math.round(ctx.sampleRate*.03),ctx.sampleRate);
@@ -247,6 +251,18 @@ function clink(vol=1,glass=false){ // glass: a coin hitting the jar rather than 
   coinStrike(actx,out(),t,1900+Math.random()*1100,.6+Math.random()*.5,.35*vol); // recordings not loaded yet
 }
 function jingle(strong){if(audible())play('jingle',strong?.7:.5,1)}
+// short filtered-noise sounds for the deposit film: footsteps, the cap's ratchet, the briefcase latches
+function noiseHit(freq,q,gain,dur,type){
+  if(!audible())return;const t=actx.currentTime;
+  if(!noiseBuf||noiseBuf.sampleRate!==actx.sampleRate){noiseBuf=actx.createBuffer(1,Math.round(actx.sampleRate*.03),actx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+  const n=actx.createBufferSource(),f=actx.createBiquadFilter(),g=actx.createGain();
+  n.buffer=noiseBuf;n.loop=true;f.type=type;f.frequency.value=freq;f.Q.value=q;
+  g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  n.connect(f);f.connect(g);g.connect(out());n.start(t);n.stop(t+dur+.02);
+}
+function footstep(){if(!audible())return;noiseHit(420,.8,.35,.09,'lowpass');tone(actx.currentTime,80+Math.random()*15,.1,.09)}
+function ratchet(){noiseHit(3400+Math.random()*600,5,.18,.03,'bandpass')}
+function latch(){noiseHit(2600,7,.45,.05,'bandpass');setTimeout(()=>noiseHit(1900,7,.35,.05,'bandpass'),90)}
 // little vibrations on Android (iPhone doesn't let web pages vibrate); they follow the sound switch
 let lastBuzz=0;
 function buzz(pattern){
@@ -287,7 +303,7 @@ function milestone(before,after){
   if(!crossed.length)return;
   const full=crossed.includes(100);
   const party=()=>{confetti(full?260:90);fanfare(full);buzz(full?[40,60,40,60,120]:[30,50,30])};
-  if(full&&jar)jar.celebrate(party);else setTimeout(party,500); // a full jar waits for the last coin and the lid
+  if(jar)jar.celebrate(party,full);else setTimeout(party,500); // waits for the last coin and the lid (a full jar pops it)
 }
 
 // ---- grown-up check: the 4-digit passcode on a shuffled keypad (a child can't copy where your finger goes) ----
@@ -459,6 +475,12 @@ if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWor
 import * as THREE from 'three';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
 import RAPIER from 'rapier';
 
 try{
@@ -474,6 +496,13 @@ const scene=new THREE.Scene();
 const pmrem=new THREE.PMREMGenerator(renderer);
 scene.environment=pmrem.fromScene(new RoomEnvironment(),.04).texture;
 const sun=new THREE.DirectionalLight(0xfff1d6,1.6);sun.position.set(3,6,5);scene.add(sun);
+// film lighting for the deposit scene: the key light casts soft shadows onto the table, and a cool rim light fades in
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-6,right:6,top:7,bottom:-4,near:1,far:25});
+sun.shadow.bias=-.0004;sun.shadow.normalBias=.02;sun.target.position.set(1.5,1,0);scene.add(sun.target);
+const rimLight=new THREE.DirectionalLight(0xa8d4ff,0);rimLight.position.set(-5,6,-6);scene.add(rimLight);
+const catcher=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.ShadowMaterial({opacity:.3}));
+catcher.rotation.x=-Math.PI/2;catcher.position.y=-.068;catcher.receiveShadow=true;scene.add(catcher);
 const camera=new THREE.PerspectiveCamera(30,1,.1,100);
 
 // background: the same soft gradient as the page, drawn inside WebGL so the glass can refract it
@@ -609,9 +638,13 @@ function addBody(p,rot){
   coins.push(b);return b;
 }
 function randomRot(tilt){const e=new THREE.Euler((Math.random()-.5)*tilt,Math.random()*6.28,(Math.random()-.5)*tilt);const r=new THREE.Quaternion().setFromEuler(e);return {x:r.x,y:r.y,z:r.z,w:r.w}}
-function spawn(){ // drop one coin in through the neck
-  const a=Math.random()*6.28,d=Math.random()*Math.max(0,NECK-C.r*.6-.05);
-  addBody({x:Math.cos(a)*d*.5,y:TOP+.75,z:Math.sin(a)*d*.5},randomRot(1.2)).setLinvel({x:0,y:-3,z:0},true);
+function spawn(){ // drop one coin in through the neck: from under his open case if he's pouring
+  let x,z;const lim=Math.max(0,NECK-C.r-.08);
+  if(officer&&officer.state==='pour'&&officer.caseOpen>.6){
+    officer.bag.localToWorld(tmpV.set(0,.2,.05));const d=Math.hypot(tmpV.x,tmpV.z)||1,k=Math.min(1,lim/d);
+    x=tmpV.x*k+(Math.random()-.5)*.12;z=tmpV.z*k+(Math.random()-.5)*.12;emitSpark(x,TOP+.8,z,.2);
+  }else{const a=Math.random()*6.28,d=Math.random()*Math.max(0,NECK-C.r*.6-.05);x=Math.cos(a)*d*.5;z=Math.sin(a)*d*.5}
+  addBody({x,y:TOP+.75,z},randomRot(1.2)).setLinvel({x:0,y:-3,z:0},true);
 }
 function upAxis(){const g=world.gravity,m=Math.hypot(g.x,g.y,g.z)||1;return new THREE.Vector3(-g.x/m,-g.y/m,-g.z/m)}
 function takeOut(n){ // the coins nearest the top (against gravity) float up out of the jar
@@ -677,36 +710,85 @@ function restorePile(){
 }
 
 // ---- lid: opens while coins go in or out ----
-let lidOpen=0,lidTarget=0,lidPop=0,wiggle=0,party=null; // party: celebration waiting for the lid to close
+let lidOpen=0,lidTarget=0,lidPop=0,wiggle=0,party=null,partyPop=false; // party: celebration waiting for the lid to close
 
-// ---- the officer: walks in with a briefcase and tips the new coins into the jar ----
-// Model: "Business Man" by Quaternius (CC0), trimmed to its Idle/Walk/Interact/Wave animations (officer.glb).
-// While he walks in, `hold` keeps the lid shut and the new coins waiting; they pour once his case is over the jar.
-let officer=null,hold=false,zoom=1;
+// ---- the deposit film ----
+// He walks in carrying a leather briefcase while the camera pulls back so the jar looks small; the camera then moves in
+// close as the cap unscrews and the coins cascade from his case in slow motion with sparkles; he waves, walks off, and
+// the camera settles back. Model: "Business Man" by Quaternius (CC0), smoothed and given richer materials here.
+// While he walks in, `hold` keeps the lid shut and the new coins waiting.
+let officer=null,hold=false,timeScale=1;
 const OFF={height:4.2,startX:7.5,standX:1.6,z:.55,speed:2.6},tmpV=new THREE.Vector3();
-function makeBriefcase(){
-  const g=new THREE.Group(),leather=new THREE.MeshStandardMaterial({color:0x5a3417,roughness:.55}),
-    brass=new THREE.MeshStandardMaterial({color:0xd8a742,metalness:1,roughness:.3});
-  g.add(new THREE.Mesh(new THREE.BoxGeometry(.72,.5,.2),leather));
-  const handle=new THREE.Mesh(new THREE.TorusGeometry(.1,.028,8,16,Math.PI),leather);handle.position.y=.25;g.add(handle);
-  for(const x of [-.23,.23]){const c=new THREE.Mesh(new THREE.BoxGeometry(.07,.06,.22),brass);c.position.set(x,.2,0);g.add(c)}
-  return g;
+const physical=o=>new THREE.MeshPhysicalMaterial(o);
+const OFFICER_LOOK={ // the model's flat colours become fabric, skin and polished leather that catch the light
+  Suit:physical({color:0x222b38,roughness:.78,sheen:1,sheenRoughness:.55,sheenColor:0x56657d}),
+  Black:physical({color:0x111114,roughness:.32,clearcoat:.7,clearcoatRoughness:.25}),
+  White:physical({color:0xeef1f5,roughness:.72,sheen:.6,sheenColor:0xffffff}),
+  Tie:physical({color:0x7c1d2c,roughness:.42,sheen:1,sheenRoughness:.35,sheenColor:0xd35a6a}),
+  Skin:physical({color:0xe0a983,roughness:.58,sheen:.5,sheenRoughness:.8,sheenColor:0xff9f80}),
+  Hair:physical({color:0x2e1d12,roughness:.55,sheen:1,sheenRoughness:.4,sheenColor:0x7a5638}),
+  Eyebrows:physical({color:0x2a1a10,roughness:.8}),
+  Eye:physical({color:0x1c120c,roughness:.08,clearcoat:1}),
+};
+function makeBriefcase(){ // rounded leather case with brass latches; its lid swings open to pour
+  const g=new THREE.Group(),
+    leather=physical({color:0x5b3418,roughness:.5,clearcoat:.35,clearcoatRoughness:.45,sheen:.4,sheenColor:0x9a6a40}),
+    brass=physical({color:0xd9aa48,metalness:1,roughness:.25});
+  const body=new THREE.Mesh(new RoundedBoxGeometry(.74,.36,.22,3,.035),leather);body.position.y=-.03;g.add(body);
+  const lidPivot=new THREE.Group();lidPivot.position.set(0,.15,-.11);g.add(lidPivot); // hinge along the back top edge
+  const lidMesh=new THREE.Mesh(new RoundedBoxGeometry(.74,.08,.22,3,.03),leather);lidMesh.position.set(0,.04,.11);lidPivot.add(lidMesh);
+  const handle=new THREE.Mesh(new THREE.TorusGeometry(.1,.025,10,20,Math.PI),leather);handle.position.y=.24;g.add(handle);
+  for(const x of [-.24,.24]){const l=new THREE.Mesh(new RoundedBoxGeometry(.07,.08,.03,2,.01),brass);l.position.set(x,.13,.115);g.add(l)}
+  const gold=physical({color:0xE8AE45,metalness:1,roughness:.3,emissive:0x5a3a08,emissiveIntensity:.45});
+  for(let i=0;i<9;i++){ // a heap of gold, hidden under the lid until it opens
+    const c=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.018,18),gold);
+    c.position.set(-.26+i*.065,.165+Math.sin(i*2.1)*.012,(i%3-1)*.05);c.rotation.set(Math.sin(i)*.5,i,Math.cos(i*1.7)*.5);g.add(c);
+  }
+  g.traverse(m=>{if(m.isMesh)m.castShadow=true});
+  g.userData.lid=lidPivot;return g;
+}
+// gold sparkles: additive points that glow under the bloom pass
+const SPARK=180,sparkPos=new Float32Array(SPARK*3).fill(-99),sparkVel=new Float32Array(SPARK*3),sparkLife=new Float32Array(SPARK);
+const sparkGeo=new THREE.BufferGeometry();sparkGeo.setAttribute('position',new THREE.BufferAttribute(sparkPos,3));
+const sparkTex=canvasTex(64,64,(g,w)=>{const gr=g.createRadialGradient(32,32,0,32,32,32);
+  gr.addColorStop(0,'rgba(255,252,230,1)');gr.addColorStop(.25,'rgba(255,215,120,.85)');gr.addColorStop(1,'rgba(255,200,80,0)');g.fillStyle=gr;g.fillRect(0,0,w,w)});
+const sparks=new THREE.Points(sparkGeo,new THREE.PointsMaterial({map:sparkTex,size:.15,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,color:0xffe6a0}));
+sparks.frustumCulled=false;scene.add(sparks);
+let sparkNext=0,sparksAlive=false;
+function emitSpark(x,y,z,spread){
+  const i=sparkNext;sparkNext=(sparkNext+1)%SPARK;
+  sparkPos.set([x+(Math.random()-.5)*spread,y+(Math.random()-.5)*spread,z+(Math.random()-.5)*spread],i*3);
+  sparkVel.set([(Math.random()-.5)*.7,Math.random()*.6-.1,(Math.random()-.5)*.7],i*3);sparkLife[i]=.5+Math.random()*.7;sparksAlive=true;
+}
+function sparkUpdate(dt){
+  if(!sparksAlive)return;sparksAlive=false;
+  for(let i=0;i<SPARK;i++){
+    if(sparkLife[i]<=0){sparkPos[i*3+1]=-99;continue}
+    sparksAlive=true;sparkLife[i]-=dt;for(let k=0;k<3;k++)sparkPos[i*3+k]+=sparkVel[i*3+k]*dt;sparkVel[i*3+1]-=.5*dt;
+  }
+  sparkGeo.attributes.position.needsUpdate=true;
 }
 let officerLoading=null;
 function loadOfficer(){ // resolves true once he's ready (or false if he can't load); safe to call more than once
   if(officerLoading)return officerLoading;
   return officerLoading=new Promise(ready=>new GLTFLoader().load('officer.glb',gltf=>{
-    const root=gltf.scene;root.traverse(o=>{if(o.isMesh)o.frustumCulled=false});
+    const root=gltf.scene;
+    root.traverse(o=>{
+      if(!o.isMesh)return;
+      o.frustumCulled=false;o.castShadow=true;
+      const look=OFFICER_LOOK[o.material.name];if(look)o.material=look;
+      // the model is flat-shaded low-poly: weld its vertices and smooth the normals for a softer, premium look
+      const g=o.geometry;g.deleteAttribute('normal');o.geometry=mergeVertices(g,1e-4);o.geometry.computeVertexNormals();
+    });
     root.updateMatrixWorld(true);root.getObjectByName('Head_end').getWorldPosition(tmpV);root.scale.setScalar(OFF.height/tmpV.y);
-    const grp=new THREE.Group(),sh=new THREE.Mesh(new THREE.PlaneGeometry(2,2),shadow.material);
-    sh.rotation.x=-Math.PI/2;sh.position.y=-.075;grp.add(root,sh);grp.visible=false;scene.add(grp);
+    const grp=new THREE.Group();grp.add(root);grp.visible=false;scene.add(grp);
     const mixer=new THREE.AnimationMixer(root),actions={};
     for(const c of gltf.animations)actions[c.name]=mixer.clipAction(c);
     if(actions.Wave){actions.Wave.setLoop(THREE.LoopRepeat,2);actions.Wave.clampWhenFinished=true} // wave twice
     const bag=makeBriefcase();bag.visible=false;scene.add(bag);
     const bone=n=>root.getObjectByName(n.replace('.',''))||root.getObjectByName(n); // the loader drops the dot from bone names
     officer={grp,root,mixer,actions,bag,upper:bone('UpperArm.R'),lower:bone('LowerArm.R'),wrist:bone('Wrist.R'),
-      state:'off',t:0,cur:null,pour:0};
+      state:'off',t:0,cur:null,pour:0,caseOpen:0,stepT:0};
     ready(true);
   },undefined,err=>{console.warn('Officer could not load',err);officerLoading=null;ready(false)})); // no officer: coins just pour in
 }
@@ -722,18 +804,22 @@ function startOfficer(){
     return;
   }
   if(officer.state!=='off')return; // already here: these coins join his pour
-  const o=officer;o.state='enter';o.t=0;o.pour=0;o.grp.visible=o.bag.visible=true;
+  const o=officer;o.state='enter';o.t=0;o.pour=0;o.caseOpen=0;o.stepT=0;o.latched=false;o.grp.visible=o.bag.visible=true;
   o.grp.position.set(OFF.startX,0,OFF.z);o.grp.rotation.y=-Math.PI/2;hold=true;act('Walk',0);
 }
 function officerUpdate(dt){
   const o=officer;if(!o||o.state==='off')return;
   o.t+=dt;o.mixer.update(dt);
   const turnTo=(to,k)=>{const d=Math.atan2(Math.sin(to-o.grp.rotation.y),Math.cos(to-o.grp.rotation.y));o.grp.rotation.y+=d*Math.min(1,dt*k)};
+  if(o.state==='enter'||o.state==='leave'){ // footsteps in time with the walk cycle
+    const half=(o.actions.Walk?o.actions.Walk.getClip().duration:.9)/2;o.stepT+=dt;if(o.stepT>=half){o.stepT-=half;footstep()}
+  }
   if(o.state==='enter'){ // walk in from the right
     o.grp.position.x-=OFF.speed*dt;turnTo(-Math.PI/2,8);
     if(o.grp.position.x<=OFF.standX){o.grp.position.x=OFF.standX;o.state='pour';o.t=0;act('Idle')}
   }else if(o.state==='pour'){ // reach over the jar; the lid comes off and the coins fall from his case
-    if(o.t>.6)hold=false;
+    if(o.t>.75&&!o.latched){o.latched=true;latch()} // click-clack: the case opens
+    if(o.t>1.0)hold=false;                             // then the cap unscrews and the coins pour
     if(o.t>1.8&&!hold&&pending===0&&!coins.some(b=>b.translation().y>TOP+.02)){o.state='wave';o.t=0;act('Wave')}
   }else if(o.state==='wave'){ // turn to the child and wave
     turnTo(Math.atan2(camera.position.x-o.grp.position.x,camera.position.z-o.grp.position.z),5);
@@ -747,10 +833,15 @@ function officerUpdate(dt){
   const e=o.pour*o.pour*(3-2*o.pour);
   o.root.updateMatrixWorld(true);
   if(e>0)reachArm(o,POUR_AT,e);
-  // the briefcase hangs from his hand while walking, and tips toward the jar as he pours
+  // the briefcase hangs from his hand while walking, and tips toward the jar as he pours; its lid swings open
   o.wrist.getWorldPosition(tmpV);
   o.bag.position.set(tmpV.x-.3*e,tmpV.y-.32+.27*e,tmpV.z);
   o.bag.rotation.set(0,o.grp.rotation.y*(1-e),1.25*e);
+  o.caseOpen=Math.max(0,Math.min(1,o.caseOpen+((o.state==='pour'&&o.t>.75)?dt*2.5:-dt*2)));
+  o.bag.userData.lid.rotation.x=-1.9*o.caseOpen*o.caseOpen*(3-2*o.caseOpen);
+  if(o.caseOpen>.6&&o.state==='pour'){ // gold glints spilling from the open case
+    o.bag.localToWorld(tmpV.set(0,.2,.05));for(let k=0;k<2;k++)emitSpark(tmpV.x,tmpV.y,tmpV.z,.25);
+  }
 }
 const POUR_AT=new THREE.Vector3(.62,TOP+1.08,.12); // where his hand goes: just above and beside the jar mouth
 const _s=new THREE.Vector3(),_e=new THREE.Vector3(),_n=new THREE.Vector3(),_p=new THREE.Vector3(),_d=new THREE.Vector3(),
@@ -869,12 +960,40 @@ function fit(){
   const dist=Math.max(3.9/(2*t)*(H/avail),2.7/(2*t*camera.aspect)/.9);
   camera.userData.dist=dist;
   camera.setViewOffset(W,H,0,H/2-(top+avail/2),W,H); // centre the jar in that space
-  camera.updateProjectionMatrix();kick();
+  camera.updateProjectionMatrix();if(composer){composer.setPixelRatio(renderer.getPixelRatio());composer.setSize(W,H)}kick();
 }
 new ResizeObserver(fit).observe(canvas);document.fonts?.ready.then(fit);addEventListener('orientationchange',()=>setTimeout(fit,300));
 
+// ---- the film's camera: shots it eases between while the officer is on screen ----
+// d: distance (x the normal framing; above 1 the jar looks smaller), tx/ty: where it looks, yaw/pitch: angle
+const SHOTS={
+  normal:  {d:1,   tx:0,  ty:0,   yaw:0,  pitch:.3},
+  wide:    {d:2.2, tx:1.7,ty:1.15,yaw:.22,pitch:.2},  // he walks in; the jar shrinks to make room
+  approach:{d:1.5, tx:.95,ty:.85, yaw:.3, pitch:.24},
+  close:   {d:.8,  tx:.25,ty:1.5, yaw:.42,pitch:.42}, // the cap comes off and the coins cascade
+  wave:    {d:1.5, tx:.95,ty:.85, yaw:.16,pitch:.22},
+};
+const cam={...SHOTS.normal};
+function shotNow(){
+  const o=officer;if(!o||o.state==='off')return SHOTS.normal;
+  if(o.state==='enter')return o.grp.position.x>3.4?SHOTS.wide:SHOTS.approach;
+  if(o.state==='pour')return lidOpen>.4||o.t>1.0?SHOTS.close:SHOTS.approach;
+  return o.state==='wave'?SHOTS.wave:SHOTS.wide;
+}
+// bloom (the glow on the gold and sparkles) only while the film plays: it costs a little GPU time
+let composer=null,bloom=null,cine=0;
+function renderFrame(){
+  if(cine<.01)return renderer.render(scene,camera);
+  if(!composer){
+    composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
+    bloom=new UnrealBloomPass(new THREE.Vector2(256,256),.35,.4,1.15); // only the brightest glints and the sparkles glowcomposer.addPass(bloom);composer.addPass(new OutputPass());
+    composer.setPixelRatio(renderer.getPixelRatio());composer.setSize(canvas.clientWidth,canvas.clientHeight);
+  }
+  bloom.strength=.35*cine;composer.render();
+}
+
 // ---- main loop: runs only while something moves, so an idle jar uses no battery ----
-let raf=0,last=0,acc=0,calmT=0,calmWins=0,calmSnap=null;
+let raf=0,last=0,acc=0,calmT=0,calmWins=0,calmSnap=null,lidTicks=0;
 function kick(){if(!raf){last=performance.now();raf=requestAnimationFrame(frame)}}
 function step(){
   simTime+=1/60;
@@ -891,31 +1010,39 @@ function step(){
   });
 }
 function frame(now){
-  const dt=Math.max(0,Math.min(now-last,100))/1000;last=Math.max(last,now);acc+=dt;
+  const dt=Math.max(0,Math.min(now-last,100))/1000;last=Math.max(last,now);
+  const officerOn=!!(officer&&officer.state!=='off');
+  // slow motion while the coins cascade from his case
+  const slow=officerOn&&officer.state==='pour'&&lidOpen>.8&&pending>0?.45:1;timeScale+=(slow-timeScale)*Math.min(1,dt*3);
+  acc+=dt*timeScale;
   const busy=pending>0||flying.length>0||coins.some(b=>b.translation().y>TOP+.02); // coins still in the neck
   lidTarget=busy&&!hold?1:0;
-  officerUpdate(dt);
+  officerUpdate(dt*timeScale);sparkUpdate(dt*timeScale);
   if(packedShown!==packed&&!hold){ // the packed level rises or falls smoothly
     const diff=packed-packedShown,stepN=Math.max(C.M*4,Math.abs(diff)/1.5)*dt;
     packedShown=Math.abs(diff)<=stepN?packed:packedShown+Math.sign(diff)*stepN;
     if(Math.round(packedShown)!==packedDrawn){drawPacked(packedShown);setFloor(packedShown)}
   }
-  const officerOn=officer&&officer.state!=='off',zoomTo=officerOn?1.6:1; // pull back so he fits in the picture
-  zoom+=(zoomTo-zoom)*Math.min(1,dt*2.5);
-  lidOpen+=(lidTarget-lidOpen)*Math.min(1,dt*6);
-  if(party&&!busy&&lidOpen<.03){lidPop=1;const p=party;party=null;setTimeout(()=>{jolt(1.4);p()},280)} // pop the lid, toss the coins
+  const shot=shotNow();for(const k in cam)cam[k]+=(shot[k]-cam[k])*Math.min(1,dt*1.5); // the camera glides between shots
+  cine+=((officerOn?1:0)-cine)*Math.min(1,dt*2);rimLight.intensity=1.6*cine;
+  if(document.body.classList.contains('cinema')!==officerOn)document.body.classList.toggle('cinema',officerOn);
+  // the lid: unscrews (slowly enough to see during the film), lifts off and is set down on the left
+  const lidRate=officerOn?.6:2.6;lidOpen+=Math.sign(lidTarget-lidOpen)*Math.min(Math.abs(lidTarget-lidOpen),lidRate*dt);
+  if(party&&!busy&&!hold&&lidOpen<.03){const p=party;party=null;if(partyPop){lidPop=1;setTimeout(()=>{jolt(1.4);p()},280)}else p()} // full: pop the lid, toss the coins
   while(acc>=1/60){step();acc-=1/60}
   // swipe inertia
   if(!drag&&Math.abs(yawVel)>.0005){yaw+=yawVel;yawVel*=.92;applyGravity()}
-  const d=(camera.userData.dist||8)*zoom,pitch=.3,ty=1.45+(zoom-1)*1.9;
-  camera.position.set(Math.sin(yaw)*Math.cos(pitch)*d,ty+Math.sin(pitch)*d,Math.cos(yaw)*Math.cos(pitch)*d);camera.lookAt(0,ty,0);
+  const d=(camera.userData.dist||8)*cam.d,ty=1.45+cam.ty,cy=yaw+cam.yaw;
+  camera.position.set(cam.tx+Math.sin(cy)*Math.cos(cam.pitch)*d,ty+Math.sin(cam.pitch)*d,Math.cos(cy)*Math.cos(cam.pitch)*d);camera.lookAt(cam.tx,ty,0);
   // lid: lifts and tips back when open; pops when the jar is full
   lidPop=Math.max(0,lidPop-dt*1.4);const pop=Math.sin(lidPop*Math.PI)*1.1;
   // opening: the lid lifts off and is stood on its edge beside the jar (there's no room above it on a phone)
-  const e=lidOpen*lidOpen*(3-2*lidOpen),arc=Math.sin(e*Math.PI)*.7;
-  // stood on edge its centre sits .87 up (radius .93 minus the table at -.07), touching the glass at the back right
-  lid.position.set(-e*1.0,lidAt.y+(.87-lidAt.y)*e+arc+pop,-e*.35); // set down on the left (the officer stands on the right)
-  lid.rotation.set(-pop*.8,0,e*Math.PI/2);
+  // first 35%: one and a half turns off the thread (ratchet ticks), then it's lifted away
+  const u=Math.min(1,lidOpen/.35),m=Math.max(0,(lidOpen-.35)/.65),e=m*m*(3-2*m),arc=Math.sin(e*Math.PI)*.7;
+  if(Math.floor(u*9)!==lidTicks){if(u>0&&u<1)ratchet();lidTicks=Math.floor(u*9)}
+  // stood on edge its centre sits .87 up (radius .93 minus the table at -.07), touching the glass at the back left
+  lid.position.set(-e*1.0,lidAt.y+u*.12+(.87-lidAt.y-.12)*e+arc+pop,-e*.35); // set down on the left (the officer stands on the right)
+  lid.rotation.order='ZYX';lid.rotation.set(-pop*.8,-u*Math.PI*3,e*Math.PI/2);
   wiggle=Math.max(0,wiggle-dt*2.2);jarGroup.rotation.z=Math.sin(wiggle*18)*wiggle*.05;
   // coin instances: the settled pile, then any coins flying out
   let i=0;
@@ -940,8 +1067,9 @@ function frame(now){
       if(calmWins>=2){coins.forEach(b=>b.sleep());calmWins=0;calmSnap=null}
     }
   }else{calmT=0;calmWins=0;calmSnap=null}
-  renderer.render(scene,camera);
-  const moving=coins.some(b=>!b.isSleeping())||busy||party||officerOn||packedShown!==packed||Math.abs(zoom-zoomTo)>.002||drag||Math.abs(yawVel)>.0005||Math.abs(lidOpen-lidTarget)>.01||lidPop>0||wiggle>0;
+  renderFrame();
+  const camMoving=Object.keys(cam).some(k=>Math.abs(cam[k]-shot[k])>.002)||cine>.01;
+  const moving=coins.some(b=>!b.isSleeping())||busy||party||officerOn||packedShown!==packed||camMoving||sparksAlive||drag||Math.abs(yawVel)>.0005||Math.abs(lidOpen-lidTarget)>.01||lidPop>0||wiggle>0;
   if(moving||rebalance())raf=requestAnimationFrame(frame);else{raf=0;savePile()}
 }
 
@@ -949,8 +1077,8 @@ C=sizeFor(Math.min(state.full,CAP));buildMesh();wanted=wantedCoins();restorePile
 fit();
 setTimeout(loadOfficer,1200); // after the jar is up, so he never slows the first paint
 // test handle: step the scene by hand (browsers throttle animation frames in background tabs)
-window.__jar={world,THREE,officerObj:()=>officer,coins:()=>coins,officer:()=>officer&&{state:officer.state,x:+officer.grp.position.x.toFixed(2),hold,zoom:+zoom.toFixed(2),anims:Object.keys(officer.actions)},dbg:()=>({packed,packedShown,hold,yaw:+yaw.toFixed(2),lidOpen,lidTarget,pending,flying:flying.length,lidPop,raf}),tick:n=>{for(let k=0;k<n;k++)frame(last+1000/60)},C:()=>C,setDevG:v=>{devG.set(v.x,v.y,v.z);applyGravity()},jolt};
-window.jarReady({update,celebrate(cb){party=cb;kick()},
+window.__jar={world,THREE,officerObj:()=>officer,coins:()=>coins,officer:()=>officer&&{state:officer.state,x:+officer.grp.position.x.toFixed(2),hold,camD:+cam.d.toFixed(2),timeScale:+timeScale.toFixed(2),anims:Object.keys(officer.actions)},dbg:()=>({packed,packedShown,hold,yaw:+yaw.toFixed(2),lidOpen,lidTarget,pending,flying:flying.length,lidPop,raf}),tick:n=>{for(let k=0;k<n;k++)frame(last+1000/60)},C:()=>C,setDevG:v=>{devG.set(v.x,v.y,v.z);applyGravity()},jolt};
+window.jarReady({update,celebrate(cb,full){party=cb;partyPop=full;kick()},
   tilt(on){if(!on){devG.set(0,-1,0);usingAccel=false;accelSign=0;world.gravity={x:0,y:-G,z:0};coins.forEach(b=>b.wakeUp());kick()}}}); // tilt switched off: gravity back to straight down
 }catch(err){console.error(err);window.jarFailed()}
 </script>

@@ -37,8 +37,11 @@ of the number warns when it's running low.
 - **Adding is for grown-ups:** **＋ Add** (and triple-tapping the number for all settings) asks for a 4-digit passcode
   on a **shuffled keypad**: the digits move every time, so a child can't copy where your finger goes. After 3 wrong
   tries it locks for a minute, even if the app is closed. With no server it's a gate for little hands, not bank-grade security.
-- **The officer makes the deposit:** when coins are added, a businessman walks in with his briefcase, lifts it over the
-  jar and tips the coins in, waves to your child, and walks off: "I worked at the office today, so money came in." 
+- **The deposit is a little film:** when coins are added, the camera pulls back so the jar looks small, and a
+  businessman walks in with his leather briefcase (footsteps and all). The camera glides in close as he raises the case
+  over the jar: the latches click, the cap unscrews with a ratchet and is set aside, and the coins cascade from the
+  case in slow motion with gold sparkles. Then he waves to your child, walks off, and everything settles back.
+  "I worked at the office today, so money came in." Milestone confetti waits until the coins have landed.
 - **Private by design:** there is no account and no server. Everything, including where each coin lies, is stored
   on the device in `localStorage`.
 - **Installs like an app** on iPhone and Android (Add to Home Screen) and **works offline** after the first visit.
@@ -79,6 +82,10 @@ It's free, with no ads and no sign-up, and nothing leaves the phone.
 - The render loop stops once no coin has visibly moved for a second, so an idle jar uses no battery.
 - The count, passcode and editing live in a plain script, so they keep working even if the 3D jar can't load.
 - The officer (`officer.glb`, ~0.9 MB) loads after the jar is up. If he can't load, coins simply pour in.
+- The film is directed in code: the camera eases between shots (wide, approach, close-up, wave), physics and animation
+  run at 0.45x during the cascade, soft shadow maps and a cool rim light fade in, an UnrealBloom pass makes the gold
+  and sparkles glow (only while the film plays), and the officer's low-poly mesh is welded and smoothed, with
+  physically based fabric, skin and leather materials. His arm reaching over the jar is two-bone IK.
 - Coin sounds are real recordings (a random clink per collision, a bounce for hard hits, a jingle for a shake),
   pitched and panned a little differently each time with Web Audio. Coins hitting the glass sound lower and softer.
 - Installable PWA: `manifest.webmanifest` with regular and maskable icons. A service worker (`sw.js`) precaches the

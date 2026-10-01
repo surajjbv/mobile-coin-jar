@@ -3,7 +3,7 @@
 //   when offline or when the network is slow.
 // - Everything else (icons, sounds, fonts, the pinned three.js / Rapier builds): served from the cache, refreshed
 //   in the background.
-const CACHE = 'coin-jar-v3';
+const CACHE = 'coin-jar-v4';
 const CDN = 'https://cdn.jsdelivr.net/npm/';
 const PRECACHE = [
   './', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'officer.glb',
@@ -15,6 +15,17 @@ const PRECACHE = [
   CDN + 'three@0.186.1/examples/jsm/loaders/GLTFLoader.js',
   CDN + 'three@0.186.1/examples/jsm/utils/BufferGeometryUtils.js',
   CDN + 'three@0.186.1/examples/jsm/utils/SkeletonUtils.js',
+  CDN + 'three@0.186.1/examples/jsm/postprocessing/EffectComposer.js',
+  CDN + 'three@0.186.1/examples/jsm/postprocessing/RenderPass.js',
+  CDN + 'three@0.186.1/examples/jsm/postprocessing/UnrealBloomPass.js',
+  CDN + 'three@0.186.1/examples/jsm/postprocessing/OutputPass.js',
+  CDN + 'three@0.186.1/examples/jsm/postprocessing/Pass.js',
+  CDN + 'three@0.186.1/examples/jsm/postprocessing/MaskPass.js',
+  CDN + 'three@0.186.1/examples/jsm/postprocessing/ShaderPass.js',
+  CDN + 'three@0.186.1/examples/jsm/shaders/CopyShader.js',
+  CDN + 'three@0.186.1/examples/jsm/shaders/LuminosityHighPassShader.js',
+  CDN + 'three@0.186.1/examples/jsm/shaders/OutputShader.js',
+  CDN + 'three@0.186.1/examples/jsm/geometries/RoundedBoxGeometry.js',
   CDN + '@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs',
 ];
 
