@@ -83,6 +83,7 @@ main{position:fixed;left:0;top:0;width:100vw;height:100dvh;pointer-events:none;z
 .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .pad button{height:62px;border-radius:18px;border:0;background:var(--sky);color:var(--ink);font:inherit;font-size:28px;font-weight:700}
 .pad button:active{transform:scale(.95)}
+.pad button:disabled{opacity:.35}
 .pad button.ghost{background:none;font-size:18px;color:var(--muted)}
 label{display:block;font-size:16px;color:var(--muted);margin:10px 0 4px}
 .row{display:flex;gap:8px;align-items:center}
@@ -288,33 +289,11 @@ function milestone(before,after){
   if(full&&jar)jar.celebrate(party);else setTimeout(party,500); // a full jar waits for the last coin and the lid
 }
 
-// ---- grown-up check: Face ID / fingerprint (a passkey on this phone) first, the app passcode as backup ----
-// There's no server, so this is a gate for little hands rather than bank-grade security: we trust the phone's own
-// "user verified" flag instead of checking a signature.
-let bioId=store.get('cj_bio',null),afterAuth=()=>openEdit();
-const b64=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))),unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-async function bioAvailable(){
-  try{return !!window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()}catch(e){return false}
-}
-async function bioEnroll(){
-  const cred=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),
-    rp:{name:'Coin Jar'},user:{id:crypto.getRandomValues(new Uint8Array(16)),name:'Coin Jar grown-up',displayName:'Coin Jar grown-up'},
-    pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
-    authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
-    timeout:60000,attestation:'none'}});
-  bioId=b64(cred.rawId);store.set('cj_bio',bioId);
-}
-async function bioCheck(){
-  const a=await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),
-    allowCredentials:[{type:'public-key',id:unb64(bioId),transports:['internal']}],userVerification:'required',timeout:60000}});
-  return !!(new Uint8Array(a.response.authenticatorData)[32]&4); // flags byte, bit 2 = user verified
-}
-function requireGrownUp(next){ // call straight from a tap: phones only show Face ID in response to one
-  afterAuth=next;
-  if(!pin)return openPin('set1'); // first time: create the backup passcode
-  if(bioId&&window.PublicKeyCredential){bioCheck().then(ok=>ok?next():openPin('enter')).catch(()=>openPin('enter'));return}
-  openPin('enter');
-}
+// ---- grown-up check: the 4-digit passcode on a shuffled keypad (a child can't copy where your finger goes) ----
+// 3 wrong tries lock it for a minute; the lock survives closing the app.
+let afterAuth=()=>openEdit(),lock=store.get('cj_lock',{n:0,until:0});
+store.set('cj_bio',null); // Face ID was tried and removed: forget any saved passkey id
+function requireGrownUp(next){afterAuth=next;openPin(pin?'enter':'set1')}
 
 // ---- triple tap the number: all the grown-up settings ----
 let taps=[];
@@ -364,7 +343,7 @@ function openAdd(prefill){
   const ai=$('#ai');
   sheet.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>ai.value=(parseInt(ai.value)||0)+ +b.dataset.a);
   $('#cancel').onclick=close;$('#more').onclick=()=>openEdit();
-  $('#addgo').onclick=()=>{const n=parseInt(ai.value);if(!(n>0))return ai.focus();close();$('#amt').value='';changeCoins(n)};
+  $('#addgo').onclick=()=>{const n=parseInt(ai.value);if(!(n>0))return ai.focus();close();$('#amt').value='';window.officerNext=true;changeCoins(n)};
 }
 
 // ---- sheet ----
@@ -374,18 +353,33 @@ scrim.addEventListener('click',e=>{if(e.target===scrim)close()});
 let entry='',firstPin='',mode='';
 const copy={set1:['Create a passcode','Pick 4 digits only you know'],set2:['Confirm passcode','Enter the same 4 digits again'],
   enter:['Enter passcode','Grown-ups only'],change1:['New passcode','Pick 4 new digits'],change2:['Confirm new passcode','Enter the same 4 digits again']};
+let lockTimer=0;
 function openPin(m,err){
-  mode=m;entry='';
-  sheet.innerHTML=`<h2>${copy[m][0]}</h2><p class="hint ${err?'err':''}">${err||copy[m][1]}</p>
+  mode=m;entry='';clearInterval(lockTimer);
+  // entering the passcode: digits in a new random order every time; choosing one: normal order
+  const d=[1,2,3,4,5,6,7,8,9,0];if(m==='enter')for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]]}
+  sheet.innerHTML=`<h2>${copy[m][0]}</h2><p class="hint ${err?'err':''}" id="pinmsg">${err||copy[m][1]}</p>
   <div class="dots" id="dots">${'<i></i>'.repeat(4)}</div>
-  <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join('')}
-  <button class="ghost" data-k="x">Cancel</button><button data-k="0">0</button><button class="ghost" data-k="b">Delete</button></div>`;
+  <div class="pad">${d.slice(0,9).map(n=>`<button data-k="${n}">${n}</button>`).join('')}
+  <button class="ghost" data-k="x">Cancel</button><button data-k="${d[9]}">${d[9]}</button><button class="ghost" data-k="b">Delete</button></div>`;
   scrim.classList.add('open');
   sheet.querySelectorAll('.pad button').forEach(b=>b.onclick=()=>key(b.dataset.k));
+  if(m==='enter'&&lock.until>Date.now())showLock();
+}
+function showLock(){ // too many wrong tries: keypad off with a countdown
+  const msg=$('#pinmsg'),btns=sheet.querySelectorAll('.pad button:not([data-k="x"])');
+  btns.forEach(b=>b.disabled=true);msg.classList.add('err');
+  const tick=()=>{
+    const left=Math.ceil((lock.until-Date.now())/1000);
+    if(left<=0){clearInterval(lockTimer);btns.forEach(b=>b.disabled=false);msg.classList.remove('err');msg.textContent=copy.enter[1];return}
+    msg.textContent=`Too many tries. Wait ${left}s`;
+  };
+  tick();lockTimer=setInterval(tick,500);
 }
 function dots(){[...$('#dots').children].forEach((d,i)=>d.classList.toggle('on',i<entry.length))}
 function key(k){
   if(k==='x')return close();
+  if(mode==='enter'&&lock.until>Date.now())return; // locked out after 3 wrong tries
   if(k==='b'){entry=entry.slice(0,-1);return dots()}
   if(entry.length<4){entry+=k;dots()}
   if(entry.length===4)setTimeout(done,150);
@@ -397,7 +391,11 @@ function done(){
     if(entry===firstPin){pin=entry;store.set('cj_pin',pin);mode==='change2'?openEdit():afterAuth()}
     else fail('Those didn’t match. Try again.',mode==='set2'?'set1':'change1');
   }
-  else if(mode==='enter'){entry===pin?afterAuth():fail('Wrong passcode. Try again.','enter')}
+  else if(mode==='enter'){
+    if(entry===pin){lock={n:0,until:0};store.set('cj_lock',lock);return afterAuth()}
+    lock.n++;if(lock.n>=3)lock={n:0,until:Date.now()+60000};store.set('cj_lock',lock);
+    fail(lock.until>Date.now()?'':'Wrong passcode. Try again.','enter');
+  }
 }
 const EMOJI=['📱','💰','🚲','🧸','🎮','⚽','🎁','🏖️'];
 const esc=s=>s.replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
@@ -415,7 +413,6 @@ function openEdit(){
   <div class="actions"><button class="secondary" id="cancel">Cancel</button><button class="primary" id="save">Save</button></div>
   <button class="link" id="snd"></button>
   <button class="link" id="tlt"></button>
-  <button class="link" id="bio" hidden></button>
   <button class="link" id="chg">Change passcode</button>`;
   scrim.classList.add('open');
   const ci=$('#ci'),fi=$('#fi');
@@ -433,12 +430,6 @@ function openEdit(){
   // iPhone asks for motion access every time the app is opened (Apple doesn't let sites keep it); this turns it off
   const tlt=$('#tlt'),tltLabel=()=>tlt.textContent=tiltOn?'Tilt & shake: on (tap to turn off)':'Tilt & shake: off (tap to turn on)';
   tltLabel();tlt.onclick=()=>{tiltOn=!tiltOn;store.set('cj_tilt',tiltOn);tltLabel();jar?.tilt(tiltOn)};
-  const bio=$('#bio'),bioLabel=t=>bio.textContent=t||(bioId?'Face ID / fingerprint: on (tap to turn off)':'Face ID / fingerprint: off (tap to set up)');
-  bioAvailable().then(ok=>{bio.hidden=!ok;bioLabel()});
-  bio.onclick=()=>{
-    if(bioId){bioId=null;store.set('cj_bio',null);return bioLabel()}
-    bioEnroll().then(()=>bioLabel()).catch(()=>bioLabel('Couldn\u2019t set up Face ID / fingerprint. Tap to try again'));
-  };
   $('#save').onclick=()=>{
     const before=state.full>0?state.coins/state.full*100:0,sameJar=Math.max(1,parseInt(fi.value)||100)===state.full;
     state.coins=val();state.full=Math.max(1,parseInt(fi.value)||100);
@@ -465,6 +456,7 @@ if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWor
 // ---- the 3D jar: three.js draws it, Rapier simulates every coin ----
 import * as THREE from 'three';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import RAPIER from 'rapier';
 
 try{
@@ -614,7 +606,91 @@ function restorePile(){
 
 // ---- lid: opens while coins go in or out ----
 let lidOpen=0,lidTarget=0,lidPop=0,wiggle=0,party=null; // party: celebration waiting for the lid to close
+
+// ---- the officer: walks in with a briefcase and tips the new coins into the jar ----
+// Model: "Business Man" by Quaternius (CC0), trimmed to its Idle/Walk/Interact/Wave animations (officer.glb).
+// While he walks in, `hold` keeps the lid shut and the new coins waiting; they pour once his case is over the jar.
+let officer=null,hold=false,zoom=1;
+const OFF={height:4.2,startX:7.5,standX:1.6,z:.55,speed:2.6},tmpV=new THREE.Vector3();
+function makeBriefcase(){
+  const g=new THREE.Group(),leather=new THREE.MeshStandardMaterial({color:0x5a3417,roughness:.55}),
+    brass=new THREE.MeshStandardMaterial({color:0xd8a742,metalness:1,roughness:.3});
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(.72,.5,.2),leather));
+  const handle=new THREE.Mesh(new THREE.TorusGeometry(.1,.028,8,16,Math.PI),leather);handle.position.y=.25;g.add(handle);
+  for(const x of [-.23,.23]){const c=new THREE.Mesh(new THREE.BoxGeometry(.07,.06,.22),brass);c.position.set(x,.2,0);g.add(c)}
+  return g;
+}
+function loadOfficer(){
+  new GLTFLoader().load('officer.glb',gltf=>{
+    const root=gltf.scene;root.traverse(o=>{if(o.isMesh)o.frustumCulled=false});
+    root.updateMatrixWorld(true);root.getObjectByName('Head_end').getWorldPosition(tmpV);root.scale.setScalar(OFF.height/tmpV.y);
+    const grp=new THREE.Group(),sh=new THREE.Mesh(new THREE.PlaneGeometry(2,2),shadow.material);
+    sh.rotation.x=-Math.PI/2;sh.position.y=-.075;grp.add(root,sh);grp.visible=false;scene.add(grp);
+    const mixer=new THREE.AnimationMixer(root),actions={};
+    for(const c of gltf.animations)actions[c.name]=mixer.clipAction(c);
+    if(actions.Wave){actions.Wave.setLoop(THREE.LoopRepeat,2);actions.Wave.clampWhenFinished=true} // wave twice
+    const bag=makeBriefcase();bag.visible=false;scene.add(bag);
+    const bone=n=>root.getObjectByName(n.replace('.',''))||root.getObjectByName(n); // the loader drops the dot from bone names
+    officer={grp,root,mixer,actions,bag,upper:bone('UpperArm.R'),lower:bone('LowerArm.R'),wrist:bone('Wrist.R'),
+      state:'off',t:0,cur:null,pour:0};
+  },undefined,()=>{}); // no officer (e.g. first visit offline): coins just pour in
+}
+function act(name,fade=.25){
+  const o=officer,a=o.actions[name];if(!a||o.cur===a)return;
+  a.reset().fadeIn(fade).play();if(o.cur)o.cur.fadeOut(fade);o.cur=a;
+}
+function startOfficer(){
+  if(!officer||officer.state!=='off'||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const o=officer;o.state='enter';o.t=0;o.pour=0;o.grp.visible=o.bag.visible=true;
+  o.grp.position.set(OFF.startX,0,OFF.z);o.grp.rotation.y=-Math.PI/2;hold=true;act('Walk',0);
+}
+function officerUpdate(dt){
+  const o=officer;if(!o||o.state==='off')return;
+  o.t+=dt;o.mixer.update(dt);
+  const turnTo=(to,k)=>{const d=Math.atan2(Math.sin(to-o.grp.rotation.y),Math.cos(to-o.grp.rotation.y));o.grp.rotation.y+=d*Math.min(1,dt*k)};
+  if(o.state==='enter'){ // walk in from the right
+    o.grp.position.x-=OFF.speed*dt;turnTo(-Math.PI/2,8);
+    if(o.grp.position.x<=OFF.standX){o.grp.position.x=OFF.standX;o.state='pour';o.t=0;act('Idle')}
+  }else if(o.state==='pour'){ // reach over the jar; the lid comes off and the coins fall from his case
+    if(o.t>.6)hold=false;
+    if(o.t>1.8&&!hold&&pending===0&&!coins.some(b=>b.translation().y>TOP+.02)){o.state='wave';o.t=0;act('Wave')}
+  }else if(o.state==='wave'){ // turn to the child and wave
+    turnTo(Math.atan2(camera.position.x-o.grp.position.x,camera.position.z-o.grp.position.z),5);
+    if(o.t>(o.actions.Wave?o.actions.Wave.getClip().duration*2:2)+.3){o.state='leave';o.t=0;act('Walk')}
+  }else if(o.state==='leave'){ // and off he goes
+    turnTo(Math.PI/2,6);if(o.t>.35)o.grp.position.x+=OFF.speed*dt;
+    if(o.grp.position.x>OFF.startX){o.state='off';o.grp.visible=o.bag.visible=false;o.cur?.stop();o.cur=null}
+  }
+  // pouring: lift his right arm (two-bone IK, blended over the animation) so the hand holds the case over the jar mouth
+  o.pour=Math.max(0,Math.min(1,o.pour+(o.state==='pour'?dt*2:-dt*2.5)));
+  const e=o.pour*o.pour*(3-2*o.pour);
+  o.root.updateMatrixWorld(true);
+  if(e>0)reachArm(o,POUR_AT,e);
+  // the briefcase hangs from his hand while walking, and tips toward the jar as he pours
+  o.wrist.getWorldPosition(tmpV);
+  o.bag.position.set(tmpV.x-.3*e,tmpV.y-.32+.27*e,tmpV.z);
+  o.bag.rotation.set(0,o.grp.rotation.y*(1-e),1.25*e);
+}
+const POUR_AT=new THREE.Vector3(.62,TOP+1.08,.12); // where his hand goes: just above and beside the jar mouth
+const _s=new THREE.Vector3(),_e=new THREE.Vector3(),_n=new THREE.Vector3(),_p=new THREE.Vector3(),_d=new THREE.Vector3(),
+  _qw=new THREE.Quaternion(),_qp=new THREE.Quaternion(),_qa=new THREE.Quaternion(),_y=new THREE.Vector3();
+function aimBone(b,dir,blend){ // turn bone b (which points along its local +Y) so it points along dir, keeping its twist
+  b.getWorldQuaternion(_qw);_y.set(0,1,0).applyQuaternion(_qw);
+  _qa.setFromUnitVectors(_y,dir).multiply(_qw);           // desired world rotation
+  b.parent.getWorldQuaternion(_qp).invert();_qa.premultiply(_qp); // into the parent's space
+  b.quaternion.slerp(_qa,blend);b.updateMatrixWorld(true);
+}
+function reachArm(o,target,blend){
+  o.upper.getWorldPosition(_s);o.lower.getWorldPosition(_e);o.wrist.getWorldPosition(_d);
+  const a=_s.distanceTo(_e),b=_e.distanceTo(_d);                  // upper and lower arm lengths
+  _n.copy(target).sub(_s);const d=Math.min(_n.length(),a+b-.001);_n.normalize();
+  const cosA=Math.max(-1,Math.min(1,(a*a+d*d-b*b)/(2*a*d))),sinA=Math.sqrt(1-cosA*cosA); // shoulder angle (law of cosines)
+  _p.set(0,-1,0).addScaledVector(_n,_n.y).normalize();            // elbow bends downward: "down", made perpendicular to the reach
+  aimBone(o.upper,_n.clone().multiplyScalar(cosA).addScaledVector(_p,sinA).normalize(),blend);
+  o.lower.getWorldPosition(_e);aimBone(o.lower,_d.copy(target).sub(_e).normalize(),blend);
+}
 function update(n,N){
+  if(window.officerNext){window.officerNext=false;if(C.N===N&&n>coins.length+pending)startOfficer()} // a deposit: the officer brings it
   if(C.N!==N){ // a different jar size: start again with coins sized for it
     coins.forEach(b=>world.removeRigidBody(b));coins=[];flying=[];pending=0;C=sizeFor(N);buildMesh();wanted=n;restorePile();
   }
@@ -727,21 +803,24 @@ function step(){
 function frame(now){
   const dt=Math.max(0,Math.min(now-last,100))/1000;last=Math.max(last,now);acc+=dt;
   const busy=pending>0||flying.length>0||coins.some(b=>b.translation().y>TOP+.02); // coins still in the neck
-  lidTarget=busy?1:0;
+  lidTarget=busy&&!hold?1:0;
+  officerUpdate(dt);
+  const officerOn=officer&&officer.state!=='off',zoomTo=officerOn?1.6:1; // pull back so he fits in the picture
+  zoom+=(zoomTo-zoom)*Math.min(1,dt*2.5);
   lidOpen+=(lidTarget-lidOpen)*Math.min(1,dt*6);
   if(party&&!busy&&lidOpen<.03){lidPop=1;const p=party;party=null;setTimeout(()=>{jolt(1.4);p()},280)} // pop the lid, toss the coins
   while(acc>=1/60){step();acc-=1/60}
   // swipe inertia
   if(!drag&&Math.abs(yawVel)>.0005){yaw+=yawVel;yawVel*=.92;applyGravity()}
-  const d=camera.userData.dist||8,pitch=.3;
-  camera.position.set(Math.sin(yaw)*Math.cos(pitch)*d,1.45+Math.sin(pitch)*d,Math.cos(yaw)*Math.cos(pitch)*d);camera.lookAt(0,1.45,0);
+  const d=(camera.userData.dist||8)*zoom,pitch=.3,ty=1.45+(zoom-1)*1.9;
+  camera.position.set(Math.sin(yaw)*Math.cos(pitch)*d,ty+Math.sin(pitch)*d,Math.cos(yaw)*Math.cos(pitch)*d);camera.lookAt(0,ty,0);
   // lid: lifts and tips back when open; pops when the jar is full
   lidPop=Math.max(0,lidPop-dt*1.4);const pop=Math.sin(lidPop*Math.PI)*1.1;
   // opening: the lid lifts off and is stood on its edge beside the jar (there's no room above it on a phone)
   const e=lidOpen*lidOpen*(3-2*lidOpen),arc=Math.sin(e*Math.PI)*.7;
   // stood on edge its centre sits .87 up (radius .93 minus the table at -.07), touching the glass at the back right
-  lid.position.set(e*1.0,lidAt.y+(.87-lidAt.y)*e+arc+pop,-e*.35);
-  lid.rotation.set(-pop*.8,0,-e*Math.PI/2);
+  lid.position.set(-e*1.0,lidAt.y+(.87-lidAt.y)*e+arc+pop,-e*.35); // set down on the left (the officer stands on the right)
+  lid.rotation.set(-pop*.8,0,e*Math.PI/2);
   wiggle=Math.max(0,wiggle-dt*2.2);jarGroup.rotation.z=Math.sin(wiggle*18)*wiggle*.05;
   // coin instances: the settled pile, then any coins flying out
   let i=0;
@@ -761,14 +840,15 @@ function frame(now){
     quiet=fast<.25?quiet+1:0;if(quiet>45){coins.forEach(b=>b.sleep());quiet=0}
   }
   renderer.render(scene,camera);
-  const moving=coins.some(b=>!b.isSleeping())||busy||party||drag||Math.abs(yawVel)>.0005||Math.abs(lidOpen-lidTarget)>.01||lidPop>0||wiggle>0;
+  const moving=coins.some(b=>!b.isSleeping())||busy||party||officerOn||Math.abs(zoom-zoomTo)>.002||drag||Math.abs(yawVel)>.0005||Math.abs(lidOpen-lidTarget)>.01||lidPop>0||wiggle>0;
   if(moving)raf=requestAnimationFrame(frame);else{raf=0;savePile()}
 }
 
 C=sizeFor(Math.min(state.full,CAP));buildMesh();wanted=wantedCoins();restorePile();
 fit();
+setTimeout(loadOfficer,1200); // after the jar is up, so he never slows the first paint
 // test handle: step the scene by hand (browsers throttle animation frames in background tabs)
-window.__jar={world,coins:()=>coins,dbg:()=>({yaw:+yaw.toFixed(2),lidOpen,lidTarget,pending,flying:flying.length,lidPop,raf}),tick:n=>{for(let k=0;k<n;k++)frame(last+1000/60)},C:()=>C,setDevG:v=>{devG.set(v.x,v.y,v.z);applyGravity()},jolt};
+window.__jar={world,THREE,officerObj:()=>officer,coins:()=>coins,officer:()=>officer&&{state:officer.state,x:+officer.grp.position.x.toFixed(2),hold,zoom:+zoom.toFixed(2),anims:Object.keys(officer.actions)},dbg:()=>({yaw:+yaw.toFixed(2),lidOpen,lidTarget,pending,flying:flying.length,lidPop,raf}),tick:n=>{for(let k=0;k<n;k++)frame(last+1000/60)},C:()=>C,setDevG:v=>{devG.set(v.x,v.y,v.z);applyGravity()},jolt};
 window.jarReady({update,celebrate(cb){party=cb;kick()},
   tilt(on){if(!on){devG.set(0,-1,0);usingAccel=false;accelSign=0;world.gravity={x:0,y:-G,z:0};coins.forEach(b=>b.wakeUp());kick()}}}); // tilt switched off: gravity back to straight down
 }catch(err){console.error(err);window.jarFailed()}

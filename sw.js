@@ -3,15 +3,18 @@
 //   when offline or when the network is slow.
 // - Everything else (icons, sounds, fonts, the pinned three.js / Rapier builds): served from the cache, refreshed
 //   in the background.
-const CACHE = 'coin-jar-v1';
+const CACHE = 'coin-jar-v2';
 const CDN = 'https://cdn.jsdelivr.net/npm/';
 const PRECACHE = [
-  './', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png',
+  './', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'officer.glb',
   ...['clink-1', 'clink-2', 'clink-3', 'clink-4', 'clink-5', 'bounce-1', 'bounce-2', 'bounce-3', 'bounce-4', 'jingle-1', 'jingle-2']
     .map(n => `sounds/${n}.m4a`),
   CDN + 'three@0.186.1/build/three.module.min.js',
   CDN + 'three@0.186.1/build/three.core.js',
   CDN + 'three@0.186.1/examples/jsm/environments/RoomEnvironment.js',
+  CDN + 'three@0.186.1/examples/jsm/loaders/GLTFLoader.js',
+  CDN + 'three@0.186.1/examples/jsm/utils/BufferGeometryUtils.js',
+  CDN + 'three@0.186.1/examples/jsm/utils/SkeletonUtils.js',
   CDN + '@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs',
 ];
 

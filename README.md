@@ -34,9 +34,11 @@ of the number warns when it's running low.
 - **Jar label:** an optional emoji and caption, such as "📱 Money in the phone".
 - **Pay bar:** type an amount and tap **Pay 💸**. After a quick "Pay 25 coins?" check, the coins fly out of the jar
   and "−25" floats up from the count, so a child can see the money leave. Anyone can pay.
-- **Adding is for grown-ups:** **＋ Add** (and triple-tapping the number for all settings) asks for **Face ID / Touch ID /
-  fingerprint**, with a 4-digit app passcode as the backup. Face ID is switched on once in the grown-ups menu; it
-  uses a passkey stored on the phone. With no server it's a gate for little hands, not bank-grade security.
+- **Adding is for grown-ups:** **＋ Add** (and triple-tapping the number for all settings) asks for a 4-digit passcode
+  on a **shuffled keypad**: the digits move every time, so a child can't copy where your finger goes. After 3 wrong
+  tries it locks for a minute, even if the app is closed. With no server it's a gate for little hands, not bank-grade security.
+- **The officer makes the deposit:** when coins are added, a businessman walks in with his briefcase, lifts it over the
+  jar and tips the coins in, waves to your child, and walks off: "I worked at the office today, so money came in." 
 - **Private by design:** there is no account and no server. Everything, including where each coin lies, is stored
   on the device in `localStorage`.
 - **Installs like an app** on iPhone and Android (Add to Home Screen) and **works offline** after the first visit.
@@ -55,8 +57,7 @@ of the number warns when it's running low.
 1. **Triple-tap the number** at the top and create a 4-digit passcode that only grown-ups know.
 2. Set **"Jar is full at"** to whatever a full jar means for you (for example 100), and the **coins** to where you are now.
 3. Optionally add a **label**, such as "📱 Money in the phone".
-4. Optionally turn on **Face ID / fingerprint** in the same menu, so adding coins doesn't need the passcode.
-5. From then on: **＋ Add** when money comes in, type the amount and **Pay** when you spend, and let your child watch the jar.
+4. From then on: **＋ Add** when money comes in, type the amount and **Pay** when you spend, and let your child watch the jar.
 
 It's free, with no ads and no sign-up, and nothing leaves the phone.
 
@@ -72,6 +73,7 @@ It's free, with no ads and no sign-up, and nothing leaves the phone.
 - Up to 300 coins are drawn (above that the jar fills proportionally). The render loop stops as soon as the
   coins are still, so an idle jar uses no battery.
 - The count, passcode and editing live in a plain script, so they keep working even if the 3D jar can't load.
+- The officer (`officer.glb`, ~0.9 MB) loads after the jar is up. If he can't load, coins simply pour in.
 - Coin sounds are real recordings (a random clink per collision, a bounce for hard hits, a jingle for a shake),
   pitched and panned a little differently each time with Web Audio. Coins hitting the glass sound lower and softer.
 - Installable PWA: `manifest.webmanifest` with regular and maskable icons. A service worker (`sw.js`) precaches the
@@ -81,8 +83,10 @@ It's free, with no ads and no sign-up, and nothing leaves the phone.
 
 ## Credits
 
-Coin sounds: [Coins Clink](https://creatorassets.com/audio/coins-clink/) by CreatorAssets, released as CC0 (public domain).
-They were trimmed and converted to AAC for `sounds/`.
+- Coin sounds: [Coins Clink](https://creatorassets.com/audio/coins-clink/) by CreatorAssets, CC0 (public domain).
+  They were trimmed and converted to AAC for `sounds/`.
+- The officer: [Business Man](https://poly.pizza/m/JFrLIKqvCH) from Quaternius' Ultimate Modular Men Pack, CC0 (public domain).
+  `officer.glb` keeps only its Idle, Walk and Wave animations. His arm reaching over the jar is two-bone IK in code.
 
 ## Run locally
 
