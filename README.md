@@ -32,7 +32,8 @@ of the number warns when it's running low.
   shake it or tap the jar to toss them, and drag sideways to spin around the jar. The clinks come from actual collisions.
 - **Milestones:** confetti at 25%, 50% and 75%. When the jar fills, the lid pops and the coins jump.
 - **Jar label:** an optional emoji and caption, such as "📱 Money in the phone".
-- **Pay bar:** type an amount and tap **Pay 💸**. After a quick "Pay 25 coins?" check, the coins fly out of the jar
+- **Pay bar** (laid out like payment apps: one amount box, money-in **＋ Add 🔒** on the left, the main money-out
+  action on the right): type an amount and tap **Pay 💸**. After a quick "Pay 25 coins?" check, the coins fly out of the jar
   and "−25" floats up from the count, so a child can see the money leave. Anyone can pay.
 - **Adding is for grown-ups:** **＋ Add** (and triple-tapping the number for all settings) asks for a 4-digit passcode
   on a **shuffled keypad**: the digits move every time, so a child can't copy where your finger goes. After 3 wrong
@@ -86,6 +87,11 @@ It's free, with no ads and no sign-up, and nothing leaves the phone.
   run at 0.45x during the cascade, soft shadow maps and a cool rim light fade in, an UnrealBloom pass makes the gold
   and sparkles glow (only while the film plays), and the officer's low-poly mesh is welded and smoothed, with
   physically based fabric, skin and leather materials. His arm reaching over the jar is two-bone IK.
+- Animation principles from feature animation are layered procedurally over his canned clips: anticipation (a
+  wind-up before he lifts the case, a crouch before he sets off), follow-through (the case swings like a pendulum on
+  springs), overlapping action (his head leads, looking at the jar, then at your child with a nod, then a glance back),
+  squash & stretch (his weight settling, the jar's happy bounce as the last coin lands, the jar leaning in eagerly),
+  arcs and slow-in/slow-out everywhere. Depth of field (BokehPass) keeps the subject crisp and the background soft.
 - Coin sounds are real recordings (a random clink per collision, a bounce for hard hits, a jingle for a shake),
   pitched and panned a little differently each time with Web Audio. Coins hitting the glass sound lower and softer.
 - Installable PWA: `manifest.webmanifest` with regular and maskable icons. A service worker (`sw.js`) precaches the
