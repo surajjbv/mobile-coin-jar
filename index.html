@@ -145,6 +145,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=300; // most coins drawn; above this each coin shown stands for more than one (keeps phones smooth)
 let jar=null;  // the 3D jar, once its module has loaded
+const APP_VERSION='2026.10.01-2'; // shown in the grown-ups menu, to check a phone has the latest
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -413,7 +414,8 @@ function openEdit(){
   <div class="actions"><button class="secondary" id="cancel">Cancel</button><button class="primary" id="save">Save</button></div>
   <button class="link" id="snd"></button>
   <button class="link" id="tlt"></button>
-  <button class="link" id="chg">Change passcode</button>`;
+  <button class="link" id="chg">Change passcode</button>
+  <p class="hint" style="margin-top:12px;font-size:13px">Version ${APP_VERSION}</p>`;
   scrim.classList.add('open');
   const ci=$('#ci'),fi=$('#fi');
   const val=()=>Math.max(0,parseInt(ci.value)||0);
@@ -620,8 +622,10 @@ function makeBriefcase(){
   for(const x of [-.23,.23]){const c=new THREE.Mesh(new THREE.BoxGeometry(.07,.06,.22),brass);c.position.set(x,.2,0);g.add(c)}
   return g;
 }
-function loadOfficer(){
-  new GLTFLoader().load('officer.glb',gltf=>{
+let officerLoading=null;
+function loadOfficer(){ // resolves true once he's ready (or false if he can't load); safe to call more than once
+  if(officerLoading)return officerLoading;
+  return officerLoading=new Promise(ready=>new GLTFLoader().load('officer.glb',gltf=>{
     const root=gltf.scene;root.traverse(o=>{if(o.isMesh)o.frustumCulled=false});
     root.updateMatrixWorld(true);root.getObjectByName('Head_end').getWorldPosition(tmpV);root.scale.setScalar(OFF.height/tmpV.y);
     const grp=new THREE.Group(),sh=new THREE.Mesh(new THREE.PlaneGeometry(2,2),shadow.material);
@@ -633,14 +637,21 @@ function loadOfficer(){
     const bone=n=>root.getObjectByName(n.replace('.',''))||root.getObjectByName(n); // the loader drops the dot from bone names
     officer={grp,root,mixer,actions,bag,upper:bone('UpperArm.R'),lower:bone('LowerArm.R'),wrist:bone('Wrist.R'),
       state:'off',t:0,cur:null,pour:0};
-  },undefined,()=>{}); // no officer (e.g. first visit offline): coins just pour in
+    ready(true);
+  },undefined,err=>{console.warn('Officer could not load',err);officerLoading=null;ready(false)})); // no officer: coins just pour in
 }
 function act(name,fade=.25){
   const o=officer,a=o.actions[name];if(!a||o.cur===a)return;
   a.reset().fadeIn(fade).play();if(o.cur)o.cur.fadeOut(fade);o.cur=a;
 }
 function startOfficer(){
-  if(!officer||officer.state!=='off'||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  if(!officer){ // tapped Add before he finished loading: keep the coins waiting for him (up to 6 s)
+    hold=true;kick();
+    const giveUp=setTimeout(()=>{hold=false;kick()},6000);
+    loadOfficer().then(ok=>{clearTimeout(giveUp);if(ok&&hold)startOfficer();else{hold=false;kick()}});
+    return;
+  }
+  if(officer.state!=='off')return; // already here: these coins join his pour
   const o=officer;o.state='enter';o.t=0;o.pour=0;o.grp.visible=o.bag.visible=true;
   o.grp.position.set(OFF.startX,0,OFF.z);o.grp.rotation.y=-Math.PI/2;hold=true;act('Walk',0);
 }
@@ -690,7 +701,7 @@ function reachArm(o,target,blend){
   o.lower.getWorldPosition(_e);aimBone(o.lower,_d.copy(target).sub(_e).normalize(),blend);
 }
 function update(n,N){
-  if(window.officerNext){window.officerNext=false;if(C.N===N&&n>coins.length+pending)startOfficer()} // a deposit: the officer brings it
+  if(window.officerNext){window.officerNext=false;if(C.N===N)startOfficer()} // a deposit: the officer brings it (even when it's too small to add a drawn coin)
   if(C.N!==N){ // a different jar size: start again with coins sized for it
     coins.forEach(b=>world.removeRigidBody(b));coins=[];flying=[];pending=0;C=sizeFor(N);buildMesh();wanted=n;restorePile();
   }

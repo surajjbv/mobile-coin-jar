@@ -3,7 +3,7 @@
 //   when offline or when the network is slow.
 // - Everything else (icons, sounds, fonts, the pinned three.js / Rapier builds): served from the cache, refreshed
 //   in the background.
-const CACHE = 'coin-jar-v2';
+const CACHE = 'coin-jar-v3';
 const CDN = 'https://cdn.jsdelivr.net/npm/';
 const PRECACHE = [
   './', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'officer.glb',
@@ -30,12 +30,14 @@ self.addEventListener('activate', e => {
 
 async function networkFirst(req) {
   const cache = await caches.open(CACHE);
+  // Always save the fresh page when it arrives, even if it was too slow to show this time:
+  // otherwise a phone on a slow connection could keep opening an old version.
+  const fresh = fetch(req).then(res => { if (res.ok) cache.put('./', res.clone()); return res; });
   try {
-    const res = await Promise.race([fetch(req), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 4000))]);
-    if (res.ok) cache.put('./', res.clone());
-    return res;
+    return await Promise.race([fresh, new Promise((_, no) => setTimeout(() => no(new Error('slow')), 4000))]);
   } catch (e) {
-    return (await cache.match('./')) || Response.error();
+    fresh.catch(() => {});
+    return (await cache.match('./')) || fresh.catch(() => Response.error());
   }
 }
 
