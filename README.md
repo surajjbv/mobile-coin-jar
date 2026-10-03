@@ -4,7 +4,7 @@
 
 **Live:** https://surajjbv.github.io/mobile-coin-jar/
 
-**Version:** 2026.10.03-6 · [what's new](CHANGELOG.md) · the grown-ups menu shows which version a phone is running
+**Version:** 2026.10.04-1 · [what's new](CHANGELOG.md) · the grown-ups menu shows which version a phone is running
 and offers to update when a newer one is live
 
 ## Why I built this
@@ -111,6 +111,8 @@ It's free, with no ads and no sign-up, and your coins and passcode never leave t
 
 - Coin sounds: [Coins Clink](https://creatorassets.com/audio/coins-clink/) by CreatorAssets, CC0 (public domain).
   They were trimmed and converted to AAC for `sounds/`.
+- Look & feel: the jelly 3D buttons, glass cards and toggle switches were inspired by patterns on
+  [uiverse.io](https://uiverse.io/) (open-source UI elements, MIT), written from scratch for this app.
 - The officer: [Business Man](https://poly.pizza/m/JFrLIKqvCH) from Quaternius' Ultimate Modular Men Pack, CC0 (public domain).
   `officer.glb` keeps only its Idle, Walk and Wave animations. His arm reaching over the jar is two-bone IK in code.
 

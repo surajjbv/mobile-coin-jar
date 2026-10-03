@@ -130,6 +130,77 @@ label{display:block;font-size:16px;color:var(--muted);margin:10px 0 4px}
 .secondary{background:var(--sky);color:var(--ink)}
 .link{display:block;margin:14px auto 0;background:none;border:0;color:var(--muted);font:inherit;font-size:16px;text-decoration:underline}
 button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+/* ===== premium skin (styles inspired by uiverse.io patterns: jelly 3D buttons, glass cards, toggle switches) ===== */
+:root{--glass:color-mix(in srgb,var(--sheet) 62%,transparent);--glass-edge:rgba(255,255,255,.28);--shadow:0 14px 34px rgba(4,20,30,.28)}
+/* the count: a glass pill, the number filled with a glowing gradient (still red / amber / green), a coin that flips now and then */
+#count{background:var(--glass);border:1px solid var(--glass-edge);border-radius:999px;padding:6px 22px 6px 12px;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.35)}
+#count #num{background:linear-gradient(180deg,var(--n1),var(--n2));-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 14px var(--glow)) drop-shadow(0 2px 0 rgba(0,0,0,.18))}
+#count.red{--n1:#ffb3a8;--n2:#ff4d3d;--glow:rgba(255,77,61,.45)}
+#count.amber{--n1:#ffe9a3;--n2:#ffa412;--glow:rgba(255,164,18,.45)}
+#count.green{--n1:#c9ffd6;--n2:#2fcf5c;--glow:rgba(47,207,92,.45)}
+#count .c{animation:flip 6s ease-in-out infinite;transform-origin:50% 50%}
+@keyframes flip{0%,88%{transform:rotateY(0)}94%{transform:rotateY(180deg) scale(1.1)}100%{transform:rotateY(360deg)}}
+.sub{margin-top:6px}
+#label{background:var(--glass);border:1px solid var(--glass-edge);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+/* the tilt hint: a pill with a gentle pulse */
+#hint{padding:6px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--glass-edge);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.04);box-shadow:0 0 0 6px rgba(247,194,26,.18)}}
+/* the pay bar: a frosted glass card */
+#bar{background:var(--glass);border:1px solid var(--glass-edge);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.3);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);padding:10px;gap:10px}
+#bar input{border:0;background:rgba(0,0,0,.18);box-shadow:inset 0 3px 8px rgba(0,0,0,.35),inset 0 -1px 0 rgba(255,255,255,.12);
+  color:var(--gold);font-size:28px;font-weight:800;letter-spacing:.02em}
+#bar input::placeholder{color:var(--muted);font-weight:700;opacity:.8}
+/* jelly buttons: glossy top, a solid base they sink into when pressed */
+#bar button,.actions button,.row button,.quick button{position:relative;border:0;font-weight:800;
+  background:linear-gradient(180deg,var(--j1),var(--j2));color:var(--jt,#fff);text-shadow:0 1px 1px rgba(0,0,0,.25);
+  box-shadow:0 5px 0 var(--j3),0 10px 16px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.45),inset 0 -3px 6px rgba(0,0,0,.12);
+  transition:transform .08s ease,box-shadow .08s ease;--j1:#5aa6c4;--j2:#2f7f9f;--j3:#1d5a73}
+#bar button::before,.actions button::before{content:'';position:absolute;left:12%;right:12%;top:5px;height:36%;border-radius:999px;
+  background:linear-gradient(rgba(255,255,255,.38),rgba(255,255,255,0));pointer-events:none}
+#bar button:active,.actions button:active,.row button:active,.quick button:active{transform:translateY(4px);
+  box-shadow:0 1px 0 var(--j3),0 3px 6px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.4)}
+#bar #pay,.actions .danger{--j1:#ff8574;--j2:#e0412f;--j3:#9a2a1e}
+#bar #add{--j1:#62da80;--j2:#22a045;--j3:#156a2b}
+.actions .primary{--j1:#ffe27a;--j2:#f2b11a;--j3:#a8760a;--jt:#3a2600;text-shadow:0 1px 0 rgba(255,255,255,.4)}
+.actions .secondary,.row button,.quick button{--j1:color-mix(in srgb,var(--sky) 85%,#fff);--j2:var(--sky);--j3:color-mix(in srgb,var(--sky) 60%,#000);--jt:var(--ink);text-shadow:none}
+/* the grown-ups sheet: a glass panel with a grab handle */
+.scrim{background:rgba(6,20,30,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.sheet{background:linear-gradient(180deg,color-mix(in srgb,var(--sheet) 92%,#fff),var(--sheet));border:1px solid var(--glass-edge);border-bottom:0;
+  box-shadow:0 -12px 40px rgba(0,0,0,.35);padding-top:30px;position:relative}
+.sheet::before{content:'';position:absolute;top:10px;left:50%;width:44px;height:5px;margin-left:-22px;border-radius:9px;background:var(--muted);opacity:.45}
+.sheet h2{font-size:26px;letter-spacing:-.01em}
+.row input,.sheet textarea,.sheet input.plain{background:rgba(0,0,0,.08);border-color:transparent;box-shadow:inset 0 2px 6px rgba(0,0,0,.18)}
+/* the passcode keypad: round glossy keys like a phone lock screen */
+.pad{grid-template-columns:repeat(3,72px);justify-content:center;gap:14px 26px}
+.pad button{width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--sky) 70%,#fff),var(--sky));
+  box-shadow:0 4px 10px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.5);transition:transform .08s,box-shadow .2s}
+.pad button:active{transform:scale(.92);box-shadow:0 0 0 6px rgba(247,194,26,.35)}
+.pad button.ghost{box-shadow:none;width:auto;border-radius:12px}
+.dots i.on{box-shadow:0 0 10px var(--gold)}
+/* on/off switches */
+.switch{display:flex;align-items:center;justify-content:space-between;width:100%;margin:12px 0 0;padding:12px 14px;border:0;border-radius:16px;
+  background:rgba(0,0,0,.07);color:var(--ink);font:inherit;font-size:17px;font-weight:700;text-align:left}
+.switch i{flex:none;position:relative;width:54px;height:32px;border-radius:999px;background:color-mix(in srgb,var(--muted) 55%,transparent);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.3);transition:background .25s}
+.switch i::after{content:'';position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;
+  box-shadow:0 2px 5px rgba(0,0,0,.3);transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+.switch.on i{background:linear-gradient(180deg,#62da80,#22a045)}
+.switch.on i::after{transform:translateX(22px)}
+/* the other menu links become chips */
+.link{display:inline-block;margin:12px 4px 0;padding:8px 16px;border-radius:999px;background:rgba(0,0,0,.07);text-decoration:none;font-weight:700}
+#chg,#fb{display:inline-block}
+.sheet>.link{display:table;margin:12px auto 0}
+/* floating +N / -N: a soft glow */
+.float{text-shadow:0 0 18px currentColor,0 2px 0 rgba(0,0,0,.2)}
+/* a few twinkling sparkles in the background */
+#twinkle{position:fixed;inset:0;pointer-events:none;z-index:0}
+#twinkle i{position:absolute;width:4px;height:4px;border-radius:50%;background:#fff6c9;box-shadow:0 0 8px 2px rgba(255,230,140,.7);
+  opacity:0;animation:twinkle 4.5s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:.75;transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){#count .c,#hint,#twinkle i{animation:none}}
 </style>
 </head>
 <body>
@@ -137,6 +208,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 <canvas id="scene" aria-label="A glass jar of coins. Tap to shake it, drag to spin it."></canvas>
 <canvas id="fx" aria-hidden="true"></canvas>
 <div id="vignette" aria-hidden="true"></div>
+<div id="twinkle" aria-hidden="true"><i style="left:8%;top:22%;animation-delay:0s"></i><i style="left:88%;top:18%;animation-delay:1.2s"></i><i style="left:14%;top:64%;animation-delay:2.1s"></i><i style="left:92%;top:58%;animation-delay:0.6s"></i><i style="left:70%;top:10%;animation-delay:3.0s"></i><i style="left:24%;top:8%;animation-delay:1.7s"></i><i style="left:80%;top:78%;animation-delay:2.6s"></i><i style="left:6%;top:84%;animation-delay:0.9s"></i><i style="left:55%;top:6%;animation-delay:3.6s"></i><i style="left:96%;top:36%;animation-delay:1.4s"></i></div>
 <main>
   <div id="top">
     <button id="count" aria-label="Coin count. Triple-tap to edit"><svg class="c" viewBox="-20 -20 40 40" aria-hidden="true">
@@ -175,7 +247,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.03-6'; // this phone's version; version.json on the site holds the latest (keep the two in step)
+const APP_VERSION='2026.10.04-1'; // this phone's version; version.json on the site holds the latest (keep the two in step)
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -366,7 +438,7 @@ function changeCoins(delta){
 function shakeBar(){const b=$('#bar');b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake')}
 function openConfirm(title,note,yesLabel,yes){
   sheet.innerHTML=`<h2>${title}</h2><p class="hint">${note}</p>
-  <div class="actions">${yes?'<button class="secondary" id="no">No</button>':''}<button class="primary" id="yes" ${yes?'style="background:#D8443A;color:#fff"':''}>${yesLabel}</button></div>`;
+  <div class="actions">${yes?'<button class="secondary" id="no">No</button>':''}<button class="${yes?'danger':'primary'}" id="yes">${yesLabel}</button></div>`;
   scrim.classList.add('open');
   if(yes)$('#no').onclick=close;
   $('#yes').onclick=()=>{close();yes&&yes()};
@@ -506,8 +578,8 @@ function openEdit(){
   <div class="emojis">${EMOJI.map(e=>`<button data-e="${e}" class="${e===pick?'on':''}" aria-label="Use ${e}">${e}</button>`).join('')}</div>
   <div class="row"><input id="gi" type="text" maxlength="30" placeholder="e.g. Money in the phone" value="${esc(label.t)}"></div>
   <div class="actions"><button class="secondary" id="cancel">Cancel</button><button class="primary" id="save">Save</button></div>
-  <button class="link" id="snd"></button>
-  <button class="link" id="tlt"></button>
+  <button class="switch" id="snd" role="switch"><span>🔊 Sounds &amp; vibration</span><i aria-hidden="true"></i></button>
+  <button class="switch" id="tlt" role="switch"><span>📱 Tilt &amp; shake</span><i aria-hidden="true"></i></button>
   <button class="link" id="chg">Change passcode</button>
   <button class="link" id="fb">⭐ Rate &amp; feedback</button>
   <p class="hint" style="margin-top:12px;font-size:15px" id="visits" hidden></p>
@@ -525,10 +597,10 @@ function openEdit(){
   $('#cancel').onclick=close;
   $('#chg').onclick=()=>openPin('change1');
   $('#fb').onclick=openFeedback;
-  const snd=$('#snd'),sndLabel=()=>snd.textContent=soundOn?'Sounds & vibration: on (tap to turn off)':'Sounds & vibration: off (tap to turn on)';
+  const snd=$('#snd'),sndLabel=()=>{snd.classList.toggle('on',soundOn);snd.setAttribute('aria-checked',soundOn)};
   sndLabel();snd.onclick=()=>{soundOn=!soundOn;store.set('cj_sound',soundOn);sndLabel();clink()};
   // iPhone asks for motion access every time the app is opened (Apple doesn't let sites keep it); this turns it off
-  const tlt=$('#tlt'),tltLabel=()=>tlt.textContent=tiltOn?'Tilt & shake: on (tap to turn off)':'Tilt & shake: off (tap to turn on)';
+  const tlt=$('#tlt'),tltLabel=()=>{tlt.classList.toggle('on',tiltOn);tlt.setAttribute('aria-checked',tiltOn)};
   tltLabel();tlt.onclick=()=>{tiltOn=!tiltOn;store.set('cj_tilt',tiltOn);tltLabel();jar?.tilt(tiltOn)};
   $('#save').onclick=()=>{
     const before=state.full>0?state.coins/state.full*100:0,sameJar=Math.max(1,parseInt(fi.value)||100)===state.full;
