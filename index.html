@@ -9,6 +9,8 @@
 <meta name="theme-color" content="#95D3E2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1A4757" media="(prefers-color-scheme: dark)">
 <title>Mobile Coin Jar</title>
+<!-- anonymous visit count (GoatCounter): no cookies, no personal data; ignored on localhost -->
+<script data-goatcounter="https://mobilecoinjar.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <meta name="apple-mobile-web-app-title" content="Coin Jar">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -117,6 +119,11 @@ label{display:block;font-size:16px;color:var(--muted);margin:10px 0 4px}
 .emojis{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .emojis button{width:44px;height:44px;border-radius:12px;border:2px solid transparent;background:var(--sky);font-size:22px}
 .emojis button.on{border-color:var(--gold-dk);background:var(--gold)}
+.stars{display:flex;justify-content:center;gap:6px;margin:4px 0 10px}
+.stars button{background:none;border:0;font-size:40px;line-height:1;padding:4px;filter:grayscale(1);opacity:.45;transition:transform .15s}
+.stars button.on{filter:none;opacity:1;transform:scale(1.1)}
+.sheet textarea,.sheet input.plain{width:100%;border-radius:16px;border:2px solid var(--sky2);background:transparent;color:var(--ink);font:inherit;font-size:17px;padding:10px 12px}
+.sheet textarea{min-height:96px;resize:vertical}
 .actions{display:flex;gap:10px;margin-top:20px}
 .actions button{flex:1;height:56px;border-radius:18px;border:0;font:inherit;font-size:20px;font-weight:700}
 .primary{background:var(--gold);color:#3A2600}
@@ -168,7 +175,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.03-3'; // this phone's version; version.json on the site holds the latest (keep the two in step)
+const APP_VERSION='2026.10.03-4'; // this phone's version; version.json on the site holds the latest (keep the two in step)
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -450,6 +457,36 @@ function checkVersion(){
     $('#upd').onclick=e=>{e.preventDefault();location.reload()};
   }).catch(()=>{el.textContent=`Version ${APP_VERSION} (offline: can't check for updates)`});
 }
+// ---- rate & feedback: sent by email through Web3Forms (the key can only deliver to the owner's inbox) ----
+const FEEDBACK_KEY='644fe895-54f9-4aa5-9663-f81bb473a8ef';
+function openFeedback(){
+  let stars=0;
+  sheet.innerHTML=`<h2>Rate Mobile Coin Jar</h2><p class="hint">How is it working for your family?</p>
+  <div class="stars" role="radiogroup" aria-label="Rating">${[1,2,3,4,5].map(n=>`<button data-r="${n}" aria-label="${n} star${n>1?'s':''}">⭐</button>`).join('')}</div>
+  <label for="fbm">Comments or ideas (optional)</label><textarea id="fbm" maxlength="2000" placeholder="What does your child think? Anything to improve?"></textarea>
+  <label for="fbe">Your email, if you'd like a reply (optional)</label><input class="plain" id="fbe" type="email" autocomplete="email" placeholder="name@example.com">
+  <input type="checkbox" name="botcheck" id="fbb" hidden tabindex="-1" autocomplete="off">
+  <div class="actions"><button class="secondary" id="cancel">Cancel</button><button class="primary" id="fbs">Send</button></div>
+  <p class="hint" style="font-size:13px;margin-top:10px">Goes straight to the app's maker by email. Nothing else is shared.</p>`;
+  scrim.classList.add('open');
+  sheet.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{stars=+b.dataset.r;sheet.querySelectorAll('[data-r]').forEach(x=>x.classList.toggle('on',+x.dataset.r<=stars))});
+  $('#cancel').onclick=close;
+  $('#fbs').onclick=async()=>{
+    const msg=$('#fbm').value.trim(),email=$('#fbe').value.trim(),btn=$('#fbs');
+    if(!stars&&!msg){$('.sheet .hint').textContent='Tap the stars or write a comment first';$('.sheet .hint').classList.add('err');return}
+    btn.disabled=true;btn.textContent='Sending…';
+    const ua=navigator.userAgent,device=/iPhone|iPad/.test(ua)?'iPhone/iPad':/Android/.test(ua)?'Android':'Other';
+    try{
+      const r=await fetch('https://api.web3forms.com/submit',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},
+        body:JSON.stringify({access_key:FEEDBACK_KEY,subject:`Mobile Coin Jar feedback: ${stars?'⭐'.repeat(stars):'comment'}`,
+          from_name:'Mobile Coin Jar',rating:stars?`${stars} / 5`:'not given',message:msg||'(no comment)',email:email||undefined,
+          app_version:APP_VERSION,device,botcheck:$('#fbb').checked})});
+      const j=await r.json();if(!j.success)throw new Error(j.message);
+      sheet.innerHTML=`<h2>Thank you! 🙏</h2><p class="hint">Your feedback is on its way.</p><div class="actions"><button class="primary" id="ok">Done</button></div>`;
+      $('#ok').onclick=close;
+    }catch(e){btn.disabled=false;btn.textContent='Send';const h=$('.sheet .hint');h.textContent='Couldn\u2019t send. Check the internet connection and try again.';h.classList.add('err')}
+  };
+}
 function openEdit(){
   let pick=label.e;
   sheet.innerHTML=`<h2>Set the coins</h2><p class="hint">Changes show in the jar right away</p>
@@ -465,6 +502,7 @@ function openEdit(){
   <button class="link" id="snd"></button>
   <button class="link" id="tlt"></button>
   <button class="link" id="chg">Change passcode</button>
+  <button class="link" id="fb">⭐ Rate &amp; feedback</button>
   <p class="hint" style="margin-top:12px;font-size:13px" id="ver">Version ${APP_VERSION}</p>`;
   checkVersion();
   scrim.classList.add('open');
@@ -478,6 +516,7 @@ function openEdit(){
   });
   $('#cancel').onclick=close;
   $('#chg').onclick=()=>openPin('change1');
+  $('#fb').onclick=openFeedback;
   const snd=$('#snd'),sndLabel=()=>snd.textContent=soundOn?'Sounds & vibration: on (tap to turn off)':'Sounds & vibration: off (tap to turn on)';
   sndLabel();snd.onclick=()=>{soundOn=!soundOn;store.set('cj_sound',soundOn);sndLabel();clink()};
   // iPhone asks for motion access every time the app is opened (Apple doesn't let sites keep it); this turns it off

@@ -4,7 +4,7 @@
 
 **Live:** https://surajjbv.github.io/mobile-coin-jar/
 
-**Version:** 2026.10.03-3 · [what's new](CHANGELOG.md) · the grown-ups menu shows which version a phone is running
+**Version:** 2026.10.03-4 · [what's new](CHANGELOG.md) · the grown-ups menu shows which version a phone is running
 and offers to update when a newer one is live
 
 ## Why I built this
@@ -46,8 +46,11 @@ of the number warns when it's running low.
   the cap spins itself off with a ratchet and hops aside. After a beat he lifts his case over the jar, the latches
   click, and only then do the coins cascade in, in slow motion with gold sparkles. The cap hops back on and screws shut. Then he waves to your child, walks off, and everything settles back.
   "I worked at the office today, so money came in." Milestone confetti waits until the coins have landed.
-- **Private by design:** there is no account and no server. Everything, including where each coin lies, is stored
-  on the device in `localStorage`.
+- **Private by design:** no accounts, no ads, no cookies. The coins, passcode and where each coin lies stay on the
+  device in `localStorage`. The only things that leave the phone: an anonymous visit count
+  ([GoatCounter](https://www.goatcounter.com/), no cookies or personal data), and feedback if a grown-up chooses to send it.
+- **Rate & feedback:** in the grown-ups menu, 1–5 stars, a comment and an optional email for a reply, delivered to the
+  maker's inbox through [Web3Forms](https://web3forms.com/).
 - **Installs like an app** on iPhone and Android (Add to Home Screen) and **works offline** after the first visit.
   The first visit downloads about 2 MB (mostly the physics engine) and shows a short "first time only" message.
 - **Edge to edge on modern phones.** On iPhone, tap the jar to allow motion access. Apple asks again each time the
@@ -67,7 +70,7 @@ of the number warns when it's running low.
 3. Optionally add a **label**, such as "📱 Money in the phone".
 4. From then on: **＋ Add** when money comes in, type the amount and **Pay** when you spend, and let your child watch the jar.
 
-It's free, with no ads and no sign-up, and nothing leaves the phone.
+It's free, with no ads and no sign-up, and your coins and passcode never leave the phone.
 
 ## Tech
 
