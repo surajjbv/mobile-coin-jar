@@ -1,7 +1,7 @@
 {
-  "name": "Coin Jar",
+  "name": "Mobile Coin Jar",
   "short_name": "Coin Jar",
-  "description": "A jar of gold coins that shows a young child how much money is left in the phone.",
+  "description": "A jar of coins that shows a young child how much money is left in the phone.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

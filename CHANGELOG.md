@@ -1,8 +1,15 @@
 # Changelog
 
 The version on a phone is shown at the bottom of the grown-ups menu (triple-tap the number). The latest version on the
-web is in [`version.json`](https://surajjbv.github.io/coin-jar/version.json); the menu compares the two and offers to
+web is in [`version.json`](https://surajjbv.github.io/mobile-coin-jar/version.json); the menu compares the two and offers to
 update.
+
+## 2026.10.03-2
+- Renamed to **Mobile Coin Jar**; new address https://surajjbv.github.io/mobile-coin-jar/ (the old coin-jar address forwards here).
+- The "gold coins" line under the number is gone; it only says "the jar is empty" or "the jar is full!".
+- Deposit, told beat by beat: he knocks on the cap, it spins off and hops aside with a squash, a beat, then his case
+  opens over the jar and only then do the coins pour. The cap hops back and screws shut before he waves.
+- Coins never fall while the cap is still coming off (also when he isn't there).
 
 ## 2026.10.03-1
 - New home: https://surajjbv.github.io/coin-jar/ (GitHub Pages). The Netlify address stays on 2026.10.01-5.

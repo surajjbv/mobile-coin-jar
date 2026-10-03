@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#95D3E2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1A4757" media="(prefers-color-scheme: dark)">
-<title>Coin Jar</title>
+<title>Mobile Coin Jar</title>
 <meta name="apple-mobile-web-app-title" content="Coin Jar">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -111,7 +111,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 </head>
 <body>
 <div id="tint" aria-hidden="true"></div>
-<canvas id="scene" aria-label="A glass jar of gold coins. Tap to shake it, drag to spin it."></canvas>
+<canvas id="scene" aria-label="A glass jar of coins. Tap to shake it, drag to spin it."></canvas>
 <canvas id="fx" aria-hidden="true"></canvas>
 <div id="vignette" aria-hidden="true"></div>
 <main>
@@ -125,7 +125,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
       <circle r="15" fill="none" stroke="#B8800C" stroke-width="1.6"/><circle r="15" cy=".8" fill="none" stroke="#FFF1B8" stroke-width=".9" opacity=".8"/>
       <use href="#star" transform="translate(0 1) scale(1.35)" fill="#A8700A" opacity=".55"/><use href="#star" transform="scale(1.35)" fill="#FFE27A"/>
       <ellipse cx="-8" cy="-9" rx="5" ry="2.2" transform="rotate(-35 -8 -9)" fill="#fff" opacity=".7"/></svg><span id="num">0</span></button>
-    <div class="sub" id="sub">gold coins</div>
+    <div class="sub" id="sub" hidden></div>
     <div id="label" hidden></div>
   </div>
   <div id="status">Filling the jar…</div>
@@ -152,7 +152,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.03-1'; // this phone's version; version.json on the site holds the latest (keep the two in step)
+const APP_VERSION='2026.10.03-2'; // this phone's version; version.json on the site holds the latest (keep the two in step)
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -164,7 +164,7 @@ function render(){
   const pct=state.full>0?state.coins/state.full*100:0;
   const c=$('#count');c.classList.remove('red','amber','green');
   c.classList.add(pct>=80?'green':pct<=20?'red':'amber');
-  $('#sub').textContent=state.coins===0?'the jar is empty':state.coins>=state.full?'the jar is full!':state.coins===1?'gold coin':'gold coins';
+  const sub=$('#sub');sub.textContent=state.coins===0?'the jar is empty':state.coins>=state.full?'the jar is full!':'';sub.hidden=!sub.textContent; // only empty/full need saying
   const l=$('#label'),txt=`${label.e} ${label.t}`.trim();l.textContent=txt;l.hidden=!txt;
   c.classList.remove('bump');void c.offsetWidth;c.classList.add('bump');
 }
@@ -264,6 +264,7 @@ function noiseHit(freq,q,gain,dur,type){
 }
 function footstep(){if(!audible())return;noiseHit(420,.8,.35,.09,'lowpass');tone(actx.currentTime,80+Math.random()*15,.1,.09)}
 function ratchet(){noiseHit(3400+Math.random()*600,5,.18,.03,'bandpass')}
+function knock(){if(!audible())return;noiseHit(650,1.1,.7,.07,'lowpass');tone(actx.currentTime,170+Math.random()*20,.2,.08)}
 function latch(){noiseHit(2600,7,.45,.05,'bandpass');setTimeout(()=>noiseHit(1900,7,.35,.05,'bandpass'),90)}
 // little vibrations on Android (iPhone doesn't let web pages vibrate); they follow the sound switch
 let lastBuzz=0;
@@ -724,7 +725,7 @@ function restorePile(){
 }
 
 // ---- lid: opens while coins go in or out ----
-let lidOpen=0,lidTarget=0,lidPop=0,wiggle=0,party=null,partyPop=false; // party: celebration waiting for the lid to close
+let lidOpen=0,lidTarget=0,lidPop=0,wiggle=0,party=null,partyPop=false,capOpenT=0;const lidSquash={x:0,v:0}; // party: celebration waiting for the lid to close
 
 // ---- the deposit film ----
 // He walks in carrying a leather briefcase while the camera pulls back so the jar looks small; the camera then moves in
@@ -802,11 +803,12 @@ function loadOfficer(){ // resolves true once he's ready (or false if he can't l
     const bag=makeBriefcase();bag.visible=false;scene.add(bag);
     const bone=n=>root.getObjectByName(n.replace('.',''))||root.getObjectByName(n); // the loader drops the dot from bone names
     officer={grp,root,mixer,actions,bag,upper:bone('UpperArm.R'),lower:bone('LowerArm.R'),wrist:bone('Wrist.R'),
+      upperL:bone('UpperArm.L'),lowerL:bone('LowerArm.L'),wristL:bone('Wrist.L'),chest:bone('Chest'),
       head:bone('Head'),neck:bone('Neck'),baseScale:root.scale.x,state:'off',t:0,cur:null,pour:0,caseOpen:0,stepT:0,
       squash:{x:0,v:0},swing:{x:0,v:0},lookDir:null,prevHand:null};
     // rest poses of the bones we adjust by hand: reset every frame, otherwise on clips that don't animate them
     // (the wave doesn't move the head) our small turns would pile up frame after frame
-    officer.rest=[officer.head,officer.neck,officer.upper,officer.lower].filter(Boolean).map(b=>[b,b.quaternion.clone()]);
+    officer.rest=[officer.head,officer.neck,officer.upper,officer.lower,officer.upperL,officer.lowerL,officer.chest].filter(Boolean).map(b=>[b,b.quaternion.clone()]);
     ready(true);
   },undefined,err=>{console.warn('Officer could not load',err);officerLoading=null;ready(false)})); // no officer: coins just pour in
 }
@@ -822,7 +824,8 @@ function startOfficer(){
     return;
   }
   if(officer.state!=='off')return; // already here: these coins join his pour
-  const o=officer;o.state='enter';o.t=0;o.pour=0;o.caseOpen=0;o.stepT=0;o.latched=false;o.grp.visible=o.bag.visible=true;
+  const o=officer;o.state='enter';o.t=0;o.pour=0;o.caseOpen=0;o.stepT=0;o.latched=false;
+  o.capWant=false;o.closing=false;o.knocks=-1;o.pourT=0;o.grp.visible=o.bag.visible=true;
   o.grp.position.set(OFF.startX,0,OFF.z);o.grp.rotation.y=-Math.PI/2;hold=true;act('Walk',0);
 }
 // ---- animation principles (as in feature animation), layered over the canned clips ----
@@ -852,12 +855,18 @@ function officerUpdate(dt){
   if(o.state==='enter'){ // walk in from the right, eyes on the jar
     o.grp.position.x-=OFF.speed*dt;turnTo(-Math.PI/2,8);
     if(o.grp.position.x<=OFF.standX){o.grp.position.x=OFF.standX;o.state='pour';o.t=0;act('Idle');o.squash.v=-1.3} // weight settles as he stops
-  }else if(o.state==='pour'){ // a beat, a wind-up, then up and over the jar; the lid comes off and the coins fall
-    if(o.t>.75&&!o.latched){o.latched=true;latch()} // click-clack: the case opens
-    if(o.t>1.0)hold=false;                             // then the cap unscrews and the coins pour
-    if(o.t>1.8&&!hold&&pending===0&&!coins.some(b=>b.translation().y>TOP+.02)){
-      o.state='wave';o.t=0;act('Wave');jarBounce.v=-2.2;   // the jar does a happy squash-and-stretch as the last coin lands
+  }else if(o.state==='pour'){
+    // beat by beat: knock knock knock on the cap; the cap spins itself off and hops aside; a beat while he looks in;
+    // he lifts his case over the jar and it clicks open; only then do the coins pour. Then everything goes back.
+    if(o.t>=.6&&o.t<=1.06){const n=Math.floor((o.t-.6)/.22);if(n!==o.knocks){o.knocks=n;knock()}}
+    if(!o.capWant&&!o.closing&&o.t>1.15){o.capWant=true;lidSquash.v=2.2} // startled by the knock: the cap squashes, then spins off
+    if(o.capWant&&lidOpen>=1&&capOpenT>.35&&o.caseOpen>.85)hold=false;   // cap down, case open: now pour
+    if(!hold)o.pourT=(o.pourT||0)+dt;
+    if(!o.closing&&!hold&&o.pourT>.8&&pending===0&&!coins.some(b=>b.translation().y>TOP+.02)){
+      o.closing=true;o.closeT=0;jarBounce.v=-2.2; // the last coin lands: the jar does a happy squash-and-stretch
     }
+    if(o.closing){o.closeT+=dt;if(o.closeT>.5)o.capWant=false}             // case shut, then the cap hops back on
+    if(o.closing&&o.closeT>.6&&lidOpen<=0){o.state='wave';o.t=0;act('Wave')}
   }else if(o.state==='wave'){ // turn to the child and wave, with a little nod at the end
     turnTo(Math.atan2(camera.position.x-o.grp.position.x,camera.position.z-o.grp.position.z),5);
     if(o.t>(o.actions.Wave?o.actions.Wave.getClip().duration:1.7)+.6){o.state='leave';o.t=0;act('Walk');o.squash.v=-1.1} // anticipation before he sets off
@@ -876,8 +885,17 @@ function officerUpdate(dt){
     else if(o.state==='leave')target=o.t<.8?camera.position:_r.copy(o.grp.position).add(_e.set(6,3.6,0));
     headLook(o,target,dt);
   }
+  // knocking: lean in and tap the cap three times with his free (left) hand
+  const sm=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
+  const kb=o.state==='pour'?sm((o.t-.3)/.25)*(1-sm((o.t-1.1)/.25)):0;
+  const lean=.3*kb+.12*o.pour*o.pour;
+  if(lean>.001&&o.chest){_f.set(Math.sin(o.grp.rotation.y),0,Math.cos(o.grp.rotation.y));worldTurn(o.chest,_qc.setFromAxisAngle(_r.set(_f.z,0,-_f.x),lean))}
+  if(kb>.001&&o.upperL){
+    const tap=o.t<.6?.16:o.t>1.06?.16:.16*Math.abs(Math.sin((o.t-.6)/.22*Math.PI));
+    reachArm(o,_r.set(.42,lidAt.y+.38+tap,.1),kb,true);
+  }
   // pouring: lift his right arm (two-bone IK) in an arc, with a wind-up: down and back first, then up and over
-  o.pour=Math.max(0,Math.min(1,o.pour+(o.state==='pour'?dt*1.6:-dt*2.5)));
+  o.pour=Math.max(0,Math.min(1,o.pour+(o.state==='pour'&&lidOpen>.55&&!o.closing?dt*1.6:-dt*2.5)));
   const e=o.pour*o.pour*(3-2*o.pour),wind=Math.sin(e*Math.PI)*(1-e)*1.4;
   if(e>0)reachArm(o,_r.copy(POUR_AT).add(_e.set(.35*wind,-.55*wind,.1*wind)),e);
   // the briefcase hangs from his hand and swings like a pendulum (follow-through), then tips toward the jar as he pours
@@ -892,7 +910,9 @@ function officerUpdate(dt){
   _qt.setFromEuler(new THREE.Euler(0,0,tilt));
   o.bag.position.set(tmpV.x+_e.x*(1-e)-.3*e,tmpV.y+_e.y*(1-e)-.05*e,tmpV.z+_e.z*(1-e));
   o.bag.quaternion.copy(_qc).slerp(_qt,e);
-  o.caseOpen=Math.max(0,Math.min(1,o.caseOpen+((o.state==='pour'&&o.t>.75)?dt*2.5:-dt*2)));
+  const opening=o.state==='pour'&&o.pour>.9&&lidOpen>=1&&!o.closing;
+  if(opening&&!o.latched){o.latched=true;latch()}if(!opening&&o.caseOpen<.05)o.latched=false; // click-clack
+  o.caseOpen=Math.max(0,Math.min(1,o.caseOpen+(opening?dt*2.5:-dt*2.5)));
   o.bag.userData.lid.rotation.x=-1.9*o.caseOpen*o.caseOpen*(3-2*o.caseOpen);
   if(o.caseOpen>.6&&o.state==='pour'){ // gold glints spilling from the open case
     o.bag.localToWorld(tmpV.set(0,.2,.05));for(let k=0;k<2;k++)emitSpark(tmpV.x,tmpV.y,tmpV.z,.25);
@@ -907,14 +927,15 @@ function aimBone(b,dir,blend){ // turn bone b (which points along its local +Y) 
   b.parent.getWorldQuaternion(_qp).invert();_qa.premultiply(_qp); // into the parent's space
   b.quaternion.slerp(_qa,blend);b.updateMatrixWorld(true);
 }
-function reachArm(o,target,blend){
-  o.upper.getWorldPosition(_s);o.lower.getWorldPosition(_e);o.wrist.getWorldPosition(_d);
+function reachArm(o,target,blend,left){
+  const up=left?o.upperL:o.upper,lo=left?o.lowerL:o.lower,wr=left?o.wristL:o.wrist;
+  up.getWorldPosition(_s);lo.getWorldPosition(_e);wr.getWorldPosition(_d);
   const a=_s.distanceTo(_e),b=_e.distanceTo(_d);                  // upper and lower arm lengths
   _n.copy(target).sub(_s);const d=Math.min(_n.length(),a+b-.001);_n.normalize();
   const cosA=Math.max(-1,Math.min(1,(a*a+d*d-b*b)/(2*a*d))),sinA=Math.sqrt(1-cosA*cosA); // shoulder angle (law of cosines)
   _p.set(0,-1,0).addScaledVector(_n,_n.y).normalize();            // elbow bends downward: "down", made perpendicular to the reach
-  aimBone(o.upper,_n.clone().multiplyScalar(cosA).addScaledVector(_p,sinA).normalize(),blend);
-  o.lower.getWorldPosition(_e);aimBone(o.lower,_d.copy(target).sub(_e).normalize(),blend);
+  aimBone(up,_n.clone().multiplyScalar(cosA).addScaledVector(_p,sinA).normalize(),blend);
+  lo.getWorldPosition(_e);aimBone(lo,_d.copy(target).sub(_e).normalize(),blend);
 }
 function update(n,N){
   if(window.officerNext){window.officerNext=false;if(C.N===N)startOfficer()} // a deposit: the officer brings it (even when it's too small to add a drawn coin)
@@ -1032,7 +1053,7 @@ const cam={...SHOTS.normal};
 function shotNow(){
   const o=officer;if(!o||o.state==='off')return SHOTS.normal;
   if(o.state==='enter')return o.grp.position.x>3.4?SHOTS.wide:SHOTS.approach;
-  if(o.state==='pour')return lidOpen>.4||o.t>1.0?SHOTS.close:SHOTS.approach;
+  if(o.state==='pour')return o.t>.25?SHOTS.close:SHOTS.approach;
   return o.state==='wave'?SHOTS.wave:SHOTS.normal; // as he walks away the camera glides back to the jar
 }
 // bloom (the glow on the gold and sparkles) only while the film plays: it costs a little GPU time
@@ -1058,7 +1079,7 @@ let raf=0,last=0,acc=0,calmT=0,calmWins=0,calmSnap=null,lidTicks=0;
 function kick(){if(!raf){last=performance.now();raf=requestAnimationFrame(frame)}}
 function step(){
   simTime+=1/60;
-  if(pending>0&&lidOpen>.8&&simTime-lastSpawn>Math.max(.025,Math.min(.12,1.4/pending))){
+  if(pending>0&&lidOpen>=1&&capOpenT>.3&&!hold&&simTime-lastSpawn>Math.max(.025,Math.min(.12,1.4/pending))){
     const clear=!coins.some(b=>b.translation().y>TOP+.25);if(clear||pending>40){spawn();pending--;lastSpawn=simTime}
   }
   plug.setEnabled(lidOpen<.5);
@@ -1074,10 +1095,10 @@ function frame(now){
   const dt=Math.max(0,Math.min(now-last,100))/1000;last=Math.max(last,now);
   const officerOn=!!(officer&&officer.state!=='off');
   // slow motion while the coins cascade from his case
-  const slow=officerOn&&officer.state==='pour'&&lidOpen>.8&&pending>0&&officer.t<3.4?.45:1; // just the first beat of the cascadetimeScale+=(slow-timeScale)*Math.min(1,dt*3);
+  const slow=officerOn&&officer.state==='pour'&&!hold&&pending>0&&(officer.pourT||0)<1.4?.45:1; // just the first beat of the cascadetimeScale+=(slow-timeScale)*Math.min(1,dt*3);
   acc+=dt*timeScale;
   const busy=pending>0||flying.length>0||coins.some(b=>b.translation().y>TOP+.02); // coins still in the neck
-  lidTarget=busy&&!hold?1:0;
+  lidTarget=officerOn?(officer.capWant?1:0):(busy&&!hold?1:0); // with the officer, the cap waits for his knock
   officerUpdate(dt*timeScale);sparkUpdate(dt*timeScale);
   if(packedShown!==packed&&!hold){ // the packed level rises or falls smoothly
     const diff=packed-packedShown,stepN=Math.max(C.M*4,Math.abs(diff)/1.5)*dt;
@@ -1088,7 +1109,10 @@ function frame(now){
   cine+=((officerOn?1:0)-cine)*Math.min(1,dt*2);rimLight.intensity=.9*cine;
   if(document.body.classList.contains('cinema')!==officerOn)document.body.classList.toggle('cinema',officerOn);
   // the lid: unscrews (slowly enough to see during the film), lifts off and is set down on the left
-  const lidRate=officerOn?.6:2.6;lidOpen+=Math.sign(lidTarget-lidOpen)*Math.min(Math.abs(lidTarget-lidOpen),lidRate*dt);
+  const lidRate=officerOn?.7:2.6,lidWas=lidOpen;lidOpen+=Math.sign(lidTarget-lidOpen)*Math.min(Math.abs(lidTarget-lidOpen),lidRate*dt);
+  if(lidOpen>=1&&lidWas<1)lidSquash.v=2.8;                             // lands on its edge with a squash
+  if(lidOpen<=0&&lidWas>0){lidSquash.v=2;jarBounce.v=-1.2}             // screwed back on: a little settle
+  capOpenT=lidOpen>=1?capOpenT+dt:0;
   if(party&&!busy&&!hold&&lidOpen<.03){const p=party;party=null;if(partyPop){lidPop=1;setTimeout(()=>{jolt(1.4);p()},280)}else p()} // full: pop the lid, toss the coins
   while(acc>=1/60){step();acc-=1/60}
   // swipe inertia
@@ -1104,6 +1128,8 @@ function frame(now){
   // stood on edge its centre sits .87 up (radius .93 minus the table at -.07), touching the glass at the back left
   lid.position.set(-e*1.0,lidAt.y+u*.12+(.87-lidAt.y-.12)*e+arc+pop,-e*.35); // set down on the left (the officer stands on the right)
   lid.rotation.order='ZYX';lid.rotation.set(-pop*.8,-u*Math.PI*3,e*Math.PI/2);
+  // squash & stretch along whichever way is "up" for it (its thickness when on the jar, its width when stood on edge)
+  const q=spring(lidSquash,0,170,10,dt)*.12,v=1-q,h=1+q*.5;lid.scale.set(e>.5?v:h,e>.5?h:v,h);
   wiggle=Math.max(0,wiggle-dt*2.2);
   const lean=spring(jarLean,officerOn&&officer.state==='pour'&&lidOpen<.3?-.05:0,60,8,dt); // leans toward him, eager
   jarGroup.rotation.z=Math.sin(wiggle*18)*wiggle*.05+lean;
@@ -1133,7 +1159,7 @@ function frame(now){
   }else{calmT=0;calmWins=0;calmSnap=null}
   renderFrame();
   const camMoving=Object.keys(cam).some(k=>Math.abs(cam[k]-shot[k])>.002)||cine>.01;
-  const moving=coins.some(b=>!b.isSleeping())||busy||party||officerOn||packedShown!==packed||camMoving||sparksAlive||Math.abs(jarBounce.x)+Math.abs(jarBounce.v)+Math.abs(jarLean.x)>.002||drag||Math.abs(yawVel)>.0005||Math.abs(lidOpen-lidTarget)>.01||lidPop>0||wiggle>0;
+  const moving=coins.some(b=>!b.isSleeping())||busy||party||officerOn||packedShown!==packed||camMoving||sparksAlive||Math.abs(jarBounce.x)+Math.abs(jarBounce.v)+Math.abs(jarLean.x)+Math.abs(lidSquash.x)+Math.abs(lidSquash.v)>.002||drag||Math.abs(yawVel)>.0005||Math.abs(lidOpen-lidTarget)>.01||lidPop>0||wiggle>0;
   if(moving||rebalance())raf=requestAnimationFrame(frame);else{raf=0;savePile()}
 }
 

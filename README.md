@@ -1,10 +1,10 @@
-# Coin Jar 🪙
+# Mobile Coin Jar 🪙
 
 **A free, physical-feeling coin jar that shows a young child how much money is left in a phone.**
 
-**Live:** https://surajjbv.github.io/coin-jar/
+**Live:** https://surajjbv.github.io/mobile-coin-jar/
 
-**Version:** 2026.10.03-1 · [what's new](CHANGELOG.md) · the grown-ups menu shows which version a phone is running
+**Version:** 2026.10.03-2 · [what's new](CHANGELOG.md) · the grown-ups menu shows which version a phone is running
 and offers to update when a newer one is live
 
 ## Why I built this
@@ -42,9 +42,9 @@ of the number warns when it's running low.
   on a **shuffled keypad**: the digits move every time, so a child can't copy where your finger goes. After 3 wrong
   tries it locks for a minute, even if the app is closed. With no server it's a gate for little hands, not bank-grade security.
 - **The deposit is a little film:** when coins are added, the camera pulls back so the jar looks small, and a
-  businessman walks in with his leather briefcase (footsteps and all). The camera glides in close as he raises the case
-  over the jar: the latches click, the cap unscrews with a ratchet and is set aside, and the coins cascade from the
-  case in slow motion with gold sparkles. Then he waves to your child, walks off, and everything settles back.
+  businessman walks in with his leather briefcase (footsteps and all). He leans in and knocks three times on the cap;
+  the cap spins itself off with a ratchet and hops aside. After a beat he lifts his case over the jar, the latches
+  click, and only then do the coins cascade in, in slow motion with gold sparkles. The cap hops back on and screws shut. Then he waves to your child, walks off, and everything settles back.
   "I worked at the office today, so money came in." Milestone confetti waits until the coins have landed.
 - **Private by design:** there is no account and no server. Everything, including where each coin lies, is stored
   on the device in `localStorage`.
@@ -100,8 +100,8 @@ It's free, with no ads and no sign-up, and nothing leaves the phone.
 - Installable PWA: `manifest.webmanifest` with regular and maskable icons. A service worker (`sw.js`) precaches the
   page, icons, sounds and the pinned library builds, so the app opens offline. The page itself is network-first,
   so a new deploy shows up on the next open.
-- Hosted on GitHub Pages: every push to `main` goes live automatically. (It started on Netlify, but the free plan's
-  monthly deploy credits ran out; the old address stays on an earlier version.)
+- Hosted on GitHub Pages: every push to `main` goes live automatically. (It started on Netlify, until the free plan's
+  monthly deploy credits ran out. The project was renamed from Coin Jar; the old `coin-jar` address forwards here.)
 
 ## Credits
 
