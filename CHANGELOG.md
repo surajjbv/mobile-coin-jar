@@ -4,6 +4,9 @@ The version on a phone is shown at the bottom of the grown-ups menu (triple-tap 
 web is in [`version.json`](https://surajjbv.github.io/mobile-coin-jar/version.json); the menu compares the two and offers to
 update.
 
+## 2026.10.03-6
+- The "newer version available" notice is red and bold so it's easy to spot.
+
 ## 2026.10.03-5
 - The grown-ups menu shows how many visits the app has had (GoatCounter's public total).
 
