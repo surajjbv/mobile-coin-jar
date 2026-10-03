@@ -4,6 +4,9 @@ The version on a phone is shown at the bottom of the grown-ups menu (triple-tap 
 web is in [`version.json`](https://surajjbv.github.io/mobile-coin-jar/version.json); the menu compares the two and offers to
 update.
 
+## 2026.10.03-5
+- The grown-ups menu shows how many visits the app has had (GoatCounter's public total).
+
 ## 2026.10.03-4
 - ⭐ Rate & feedback in the grown-ups menu: stars, a comment and an optional email, sent to the maker by email.
 - Anonymous visit count with GoatCounter (no cookies, no personal data).

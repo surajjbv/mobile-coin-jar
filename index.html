@@ -175,7 +175,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.03-4'; // this phone's version; version.json on the site holds the latest (keep the two in step)
+const APP_VERSION='2026.10.03-5'; // this phone's version; version.json on the site holds the latest (keep the two in step)
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -447,6 +447,13 @@ function done(){
 }
 const EMOJI=['📱','💰','🚲','🧸','🎮','⚽','🎁','🏖️'];
 const esc=s=>s.replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+// how many visits the app has had: GoatCounter's public, read-only total (shows nothing until it's enabled there)
+function showVisits(){
+  fetch('https://mobilecoinjar.goatcounter.com/counter/TOTAL.json').then(r=>r.ok?r.json():Promise.reject()).then(j=>{
+    const el=$('#visits');if(!el||!j.count)return;
+    el.textContent=`👀 ${j.count} visit${j.count==='1'?'':'s'} so far`;el.hidden=false;
+  }).catch(()=>{});
+}
 // is this phone running what's live on the web? (version.json is never served from the offline cache)
 function checkVersion(){
   const el=$('#ver');if(!el)return;
@@ -503,8 +510,9 @@ function openEdit(){
   <button class="link" id="tlt"></button>
   <button class="link" id="chg">Change passcode</button>
   <button class="link" id="fb">⭐ Rate &amp; feedback</button>
-  <p class="hint" style="margin-top:12px;font-size:13px" id="ver">Version ${APP_VERSION}</p>`;
-  checkVersion();
+  <p class="hint" style="margin-top:12px;font-size:15px" id="visits" hidden></p>
+  <p class="hint" style="margin-top:4px;font-size:13px" id="ver">Version ${APP_VERSION}</p>`;
+  checkVersion();showVisits();
   scrim.classList.add('open');
   const ci=$('#ci'),fi=$('#fi');
   const val=()=>Math.max(0,parseInt(ci.value)||0);
