@@ -4,7 +4,7 @@
 
 **Live:** https://surajjbv.github.io/mobile-coin-jar/
 
-**Version:** 2026.10.03-2 · [what's new](CHANGELOG.md) · the grown-ups menu shows which version a phone is running
+**Version:** 2026.10.03-3 · [what's new](CHANGELOG.md) · the grown-ups menu shows which version a phone is running
 and offers to update when a newer one is live
 
 ## Why I built this
@@ -49,6 +49,7 @@ of the number warns when it's running low.
 - **Private by design:** there is no account and no server. Everything, including where each coin lies, is stored
   on the device in `localStorage`.
 - **Installs like an app** on iPhone and Android (Add to Home Screen) and **works offline** after the first visit.
+  The first visit downloads about 2 MB (mostly the physics engine) and shows a short "first time only" message.
 - **Edge to edge on modern phones.** On iPhone, tap the jar to allow motion access. Apple asks again each time the
   app is opened, and there's a grown-ups switch to turn tilt & shake off if you'd rather not see the prompt.
   Android needs no tap and also gives a little vibration on hard hits, shakes and milestones.

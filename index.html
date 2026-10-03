@@ -15,7 +15,20 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<!-- module map first: browsers ignore one that arrives after module downloads have started -->
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js",
+  "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.js":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+  "rapier":"https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs"
+}}
+</script>
+<!-- start every 3D download at once, in parallel (the physics engine is the big one, ~1.5 MB) -->
 <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/environments/RoomEnvironment.js">
 <style>
 :root{
   --sky:#BFE6F0; --sky2:#8FD0E0; --top:#95D3E2; --ink:#173848; --gold:#F7C21A; --gold-dk:#C98A0E;
@@ -50,7 +63,10 @@ main{position:fixed;left:0;top:0;width:100vw;height:100dvh;pointer-events:none;z
 .sub{font-size:18px;font-weight:600;color:var(--muted)}
 #label{margin-top:6px;padding:4px 14px;border-radius:999px;background:color-mix(in srgb,var(--sheet) 55%,transparent);
   font-size:18px;font-weight:700;max-width:88vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#status{margin:auto;font-size:18px;font-weight:600;color:var(--muted);text-align:center;max-width:320px}
+#status{margin:auto;font-size:18px;font-weight:600;color:var(--muted);text-align:center;max-width:320px;line-height:1.35}
+#status .spin{display:inline-block;font-size:44px;animation:spin 1.2s linear infinite;margin-bottom:6px}
+#status small{display:block;font-size:15px;font-weight:500;margin-top:8px}
+@keyframes spin{to{transform:rotateY(360deg)}}
 #vignette{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:0;transition:opacity .9s;
   background:radial-gradient(ellipse at 50% 45%,transparent 42%,rgba(0,0,0,.6) 100%)}
 body.cinema #vignette{opacity:1}
@@ -128,7 +144,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
     <div class="sub" id="sub" hidden></div>
     <div id="label" hidden></div>
   </div>
-  <div id="status">Filling the jar…</div>
+  <div id="status" role="status" aria-live="polite"></div>
   <div id="bottom">
     <div id="hint" hidden>Tap the jar, then tilt your phone! 📱</div>
     <!-- like payment apps: one amount, money-in on the left, the main money-out action on the right (thumb side) -->
@@ -152,7 +168,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.03-2'; // this phone's version; version.json on the site holds the latest (keep the two in step)
+const APP_VERSION='2026.10.03-3'; // this phone's version; version.json on the site holds the latest (keep the two in step)
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -168,8 +184,13 @@ function render(){
   const l=$('#label'),txt=`${label.e} ${label.t}`.trim();l.textContent=txt;l.hidden=!txt;
   c.classList.remove('bump');void c.offsetWidth;c.classList.add('bump');
 }
-window.jarReady=j=>{jar=j;$('#status').hidden=true;render()};
-window.jarFailed=()=>{$('#status').textContent='Couldn’t load the 3D jar. Check the internet connection and reopen the app.'};
+// loading message: only if the jar takes a moment; the first visit downloads ~2 MB once, after that it's cached
+const firstVisit=!('serviceWorker' in navigator&&navigator.serviceWorker.controller);
+const slowTimer=setTimeout(()=>{if(jar)return;$('#status').innerHTML=firstVisit
+  ?'<span class="spin">🪙</span><br>Setting up your coin jar…<small>First time only: it downloads the 3D jar (about 2 MB) once. After that it opens instantly, even offline.</small>'
+  :'<span class="spin">🪙</span><br>Opening the jar…'},900);
+window.jarReady=j=>{jar=j;clearTimeout(slowTimer);$('#status').hidden=true;render()};
+window.jarFailed=()=>{clearTimeout(slowTimer);$('#status').hidden=false;$('#status').textContent='Couldn’t load the 3D jar. Check the internet connection and reopen the app.'};
 
 // ---- sound: real coin recordings (CC0, sounds/), with a synthesised fallback until they load ----
 let actx=null,lastClink=0,soundOn=store.get('cj_sound',true),tiltOn=store.get('cj_tilt',true);
@@ -477,13 +498,7 @@ render();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 
-<script type="importmap">
-{"imports":{
-  "three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js",
-  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-  "rapier":"https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs"
-}}
-</script>
+
 <script type="module">
 // ---- the 3D jar: three.js draws it, Rapier simulates every coin ----
 import * as THREE from 'three';

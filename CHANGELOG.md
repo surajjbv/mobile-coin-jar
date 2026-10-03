@@ -4,6 +4,11 @@ The version on a phone is shown at the bottom of the grown-ups menu (triple-tap 
 web is in [`version.json`](https://surajjbv.github.io/mobile-coin-jar/version.json); the menu compares the two and offers to
 update.
 
+## 2026.10.03-3
+- Faster first visit: the minified 3D core (about 160 KB less) and every 3D file downloading in parallel.
+- If the jar takes a moment, a spinning coin explains it: on the first visit, that it downloads about 2 MB once and then
+  opens instantly, even offline.
+
 ## 2026.10.03-2
 - Renamed to **Mobile Coin Jar**; new address https://surajjbv.github.io/mobile-coin-jar/ (the old coin-jar address forwards here).
 - The "gold coins" line under the number is gone; it only says "the jar is empty" or "the jar is full!".
