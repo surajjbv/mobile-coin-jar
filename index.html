@@ -118,8 +118,10 @@ label{display:block;font-size:16px;color:var(--muted);margin:10px 0 4px}
 .row button{height:56px;min-width:64px;border-radius:16px;border:0;background:var(--sky);color:var(--ink);font:inherit;font-size:20px;font-weight:700}
 .quick{display:flex;gap:8px;margin-top:8px}
 .quick button{flex:1;height:40px;border-radius:12px;border:0;background:var(--sky);color:var(--ink);font:inherit;font-size:16px;font-weight:600}
-.emojis{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.emojis button{width:44px;height:44px;border-radius:12px;border:2px solid transparent;background:var(--sky);font-size:22px}
+.emojis{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-bottom:8px}
+.emojis button{width:100%;aspect-ratio:1;max-height:44px;padding:0;border-radius:12px;border:2px solid transparent;background:var(--sky);font-size:20px}
+label.oneline{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}label.oneline span{font-size:13px;opacity:.85}
+.sheet>.link.top-chip{position:absolute;top:14px;right:16px;margin:0;padding:6px 12px;font-size:14px;z-index:1}
 .emojis button.on{border-color:var(--gold-dk);background:var(--gold)}
 .stars{display:flex;justify-content:center;gap:6px;margin:4px 0 10px}
 .stars button{background:none;border:0;font-size:40px;line-height:1;padding:4px;filter:grayscale(1);opacity:.45;transition:transform .15s}
@@ -160,8 +162,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
   background:linear-gradient(180deg,var(--j1),var(--j2));color:var(--jt,#fff);text-shadow:0 1px 1px rgba(0,0,0,.25);
   box-shadow:0 5px 0 var(--j3),0 10px 16px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.45),inset 0 -3px 6px rgba(0,0,0,.12);
   transition:transform .08s ease,box-shadow .08s ease;--j1:#5aa6c4;--j2:#2f7f9f;--j3:#1d5a73}
-#bar button::before,.actions button::before{content:'';position:absolute;left:12%;right:12%;top:5px;height:36%;border-radius:999px;
-  background:linear-gradient(rgba(255,255,255,.38),rgba(255,255,255,0));pointer-events:none}
+/* one seamless glossy surface: the shine is part of the gradient, no separate strip inside the button */
+#bar button,.actions button{background:linear-gradient(180deg,color-mix(in srgb,var(--j1) 78%,#fff) 0%,var(--j1) 38%,var(--j2) 100%)}
 #bar button:active,.actions button:active,.row button:active,.quick button:active{transform:translateY(4px);
   box-shadow:0 1px 0 var(--j3),0 3px 6px rgba(0,0,0,.25),inset 0 2px 0 rgba(255,255,255,.4)}
 #bar #pay,.actions .danger{--j1:#ff8574;--j2:#e0412f;--j3:#9a2a1e}
@@ -249,7 +251,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.04-2'; // this phone's version; version.json on the site holds the latest (keep the two in step)
+const APP_VERSION='2026.10.04-3'; // this phone's version; version.json on the site holds the latest (keep the two in step)
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -570,11 +572,11 @@ function openFeedback(){
 }
 function openEdit(){
   let pick=label.e;
-  sheet.innerHTML=`<h2>Set the coins</h2><p class="hint">Changes show in the jar right away</p>
+  sheet.innerHTML=`<button class="link top-chip" id="fb">⭐ Rate</button><h2>Set the coins</h2>
   <label for="ci">Coins in the jar</label>
   <div class="row"><button data-d="-1" aria-label="Remove one">−</button><input id="ci" type="number" inputmode="numeric" min="0" value="${state.coins}"><button data-d="1" aria-label="Add one">+</button></div>
   <div class="quick"><button data-s="0">Empty</button><button data-d="-10">−10</button><button data-d="10">+10</button><button data-s="full">Fill up</button></div>
-  <label for="fi">Jar is full at <span style="font-size:13px">(up to 10,000 coins drawn; they get smaller as it grows)</span></label>
+  <label for="fi" class="oneline">Jar is full at <span>(up to 10,000)</span></label>
   <div class="row"><input id="fi" type="number" inputmode="numeric" min="1" value="${state.full}"></div>
   <label for="gi">Jar label (optional)</label>
   <div class="emojis">${EMOJI.map(e=>`<button data-e="${e}" class="${e===pick?'on':''}" aria-label="Use ${e}">${e}</button>`).join('')}</div>
@@ -583,7 +585,6 @@ function openEdit(){
   <button class="switch" id="snd" role="switch"><span>🔊 Sounds &amp; vibration</span><i aria-hidden="true"></i></button>
   <button class="switch" id="tlt" role="switch"><span>📱 Tilt &amp; shake</span><i aria-hidden="true"></i></button>
   <button class="link" id="chg">Change passcode</button>
-  <button class="link" id="fb">⭐ Rate &amp; feedback</button>
   <p class="hint" style="margin-top:12px;font-size:15px" id="visits" hidden></p>
   <p class="hint" style="margin-top:4px;font-size:13px" id="ver">Version ${APP_VERSION}</p>`;
   checkVersion();showVisits();

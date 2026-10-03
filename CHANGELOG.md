@@ -4,6 +4,11 @@ The version on a phone is shown at the bottom of the grown-ups menu (triple-tap 
 web is in [`version.json`](https://surajjbv.github.io/mobile-coin-jar/version.json); the menu compares the two and offers to
 update.
 
+## 2026.10.04-3
+- Tidier grown-ups menu: no subtitle, "Jar is full at (up to 10,000)" on one line, all label emojis in one row,
+  and "⭐ Rate" as a chip in the top-right corner.
+- Seamless buttons: the shine is part of the button, not a strip inside it.
+
 ## 2026.10.04-2
 - Midnight spotlight backdrop: deep navy with a soft glow behind the jar, so the clear glass shows by its lit
   edges and the gold looks richer (light mode: a bright daylight version). Dark-mode panels are navy to match.
