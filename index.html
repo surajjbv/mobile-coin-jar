@@ -152,7 +152,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.01-5'; // shown in the grown-ups menu, to check a phone has the latest
+const APP_VERSION='2026.10.03-1'; // this phone's version; version.json on the site holds the latest (keep the two in step)
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -418,6 +418,16 @@ function done(){
 }
 const EMOJI=['📱','💰','🚲','🧸','🎮','⚽','🎁','🏖️'];
 const esc=s=>s.replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+// is this phone running what's live on the web? (version.json is never served from the offline cache)
+function checkVersion(){
+  const el=$('#ver');if(!el)return;
+  fetch('version.json',{cache:'no-store'}).then(r=>r.json()).then(({version})=>{
+    if(!$('#ver'))return;
+    if(version===APP_VERSION){el.textContent=`Version ${APP_VERSION} \u2713 up to date`;return}
+    el.innerHTML=`Version ${APP_VERSION} \u00b7 <a href="#" id="upd">newer version ${esc(version)} available, tap to update</a>`;
+    $('#upd').onclick=e=>{e.preventDefault();location.reload()};
+  }).catch(()=>{el.textContent=`Version ${APP_VERSION} (offline: can't check for updates)`});
+}
 function openEdit(){
   let pick=label.e;
   sheet.innerHTML=`<h2>Set the coins</h2><p class="hint">Changes show in the jar right away</p>
@@ -433,7 +443,8 @@ function openEdit(){
   <button class="link" id="snd"></button>
   <button class="link" id="tlt"></button>
   <button class="link" id="chg">Change passcode</button>
-  <p class="hint" style="margin-top:12px;font-size:13px">Version ${APP_VERSION}</p>`;
+  <p class="hint" style="margin-top:12px;font-size:13px" id="ver">Version ${APP_VERSION}</p>`;
+  checkVersion();
   scrim.classList.add('open');
   const ci=$('#ci'),fi=$('#fi');
   const val=()=>Math.max(0,parseInt(ci.value)||0);

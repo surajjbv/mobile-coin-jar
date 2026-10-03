@@ -3,7 +3,7 @@
 //   when offline or when the network is slow.
 // - Everything else (icons, sounds, fonts, the pinned three.js / Rapier builds): served from the cache, refreshed
 //   in the background.
-const CACHE = 'coin-jar-v5';
+const CACHE = 'coin-jar-v6';
 const CDN = 'https://cdn.jsdelivr.net/npm/';
 const PRECACHE = [
   './', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'officer.glb',
@@ -66,6 +66,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  if (url.origin === location.origin && url.pathname.endsWith('/version.json')) return; // always ask the network: it's how the app spots updates
   if (req.mode === 'navigate' && url.origin === location.origin) return e.respondWith(networkFirst(req));
   if (url.origin === location.origin || url.href.startsWith(CDN) ||
       url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
