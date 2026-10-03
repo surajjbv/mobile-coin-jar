@@ -4,6 +4,10 @@ The version on a phone is shown at the bottom of the grown-ups menu (triple-tap 
 web is in [`version.json`](https://surajjbv.github.io/mobile-coin-jar/version.json); the menu compares the two and offers to
 update.
 
+## 2026.10.04-2
+- Midnight spotlight backdrop: deep navy with a soft glow behind the jar, so the clear glass shows by its lit
+  edges and the gold looks richer (light mode: a bright daylight version). Dark-mode panels are navy to match.
+
 ## 2026.10.04-1
 - Premium look: glossy "jelly" 3D buttons that sink when pressed, a frosted-glass pay bar, a glowing glass pill for the
   count (still red / amber / green) with a coin that flips now and then, round lock-screen style passcode keys, real

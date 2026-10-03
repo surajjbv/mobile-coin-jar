@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#95D3E2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1A4757" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#BDE2ED" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F182C" media="(prefers-color-scheme: dark)">
 <title>Mobile Coin Jar</title>
 <!-- anonymous visit count (GoatCounter): no cookies, no personal data; ignored on localhost -->
 <script data-goatcounter="https://mobilecoinjar.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
@@ -33,18 +33,20 @@
 <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/environments/RoomEnvironment.js">
 <style>
 :root{
-  --sky:#BFE6F0; --sky2:#8FD0E0; --top:#95D3E2; --ink:#173848; --gold:#F7C21A; --gold-dk:#C98A0E;
+  --sky:#BFE6F0; --sky2:#8FD0E0; --top:#BDE2ED; --ink:#173848;
+  /* "spotlight" backdrop: a soft glow behind the jar fading out to the edges (how glass and gold are photographed) */
+  --bg-c:#FFFFFF; --bg-m:#D6EEF6; --bg-e:#9FD3E3; --gold:#F7C21A; --gold-dk:#C98A0E;
   --red:#D22F2F; --amber:#B86E00; --green:#23823A; --sheet:#FFFFFF; --muted:#5B7682;
 }
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){--sky:#0F2E3A;--sky2:#1B4A5B;--top:#1A4757;--ink:#EAF6FA;--sheet:#17394A;--muted:#A6C3CE;--red:#FF6B6B;--amber:#FFB938;--green:#5FD37A}
+  :root:not([data-theme="light"]){--sky:#0E1830;--sky2:#233457;--top:#0F182C;--bg-c:#3D5B86;--bg-m:#16233F;--bg-e:#060A14;--ink:#EEF2FA;--sheet:#16213A;--muted:#A9B8D6;--red:#FF6B6B;--amber:#FFB938;--green:#5FD37A}
 }
-:root[data-theme="dark"]{--sky:#0F2E3A;--sky2:#1B4A5B;--top:#1A4757;--ink:#EAF6FA;--sheet:#17394A;--muted:#A6C3CE;--red:#FF6B6B;--amber:#FFB938;--green:#5FD37A}
+:root[data-theme="dark"]{--sky:#0E1830;--sky2:#233457;--top:#0F182C;--bg-c:#3D5B86;--bg-m:#16233F;--bg-e:#060A14;--ink:#EEF2FA;--sheet:#16213A;--muted:#A9B8D6;--red:#FF6B6B;--amber:#FFB938;--green:#5FD37A}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* edge to edge: the page paints under the status bar, notch and home indicator; content keeps clear via safe-area insets */
 /* iOS 26 Safari ignores theme-color and tints its bars from the page's base background colour, so that must be the top colour */
 html{background:var(--top);height:100%}
-body{margin:0;min-height:100lvh;background:var(--top) linear-gradient(180deg,var(--top),var(--sky) 75%) fixed;color:var(--ink);
+body{margin:0;min-height:100lvh;background:var(--top) radial-gradient(ellipse 120% 70% at 50% 45%,var(--bg-c),var(--bg-m) 45%,var(--bg-e)) fixed;color:var(--ink);
   font-family:"Baloo 2",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;touch-action:none;
   -webkit-user-select:none;user-select:none;overflow:hidden;overscroll-behavior:none}
 /* Safari tints its top bar from what touches the top edge: match the gradient's lightest (top) colour, not the page's darker base */
@@ -247,7 +249,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.04-1'; // this phone's version; version.json on the site holds the latest (keep the two in step)
+const APP_VERSION='2026.10.04-2'; // this phone's version; version.json on the site holds the latest (keep the two in step)
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -656,10 +658,11 @@ const camera=new THREE.PerspectiveCamera(30,1,.1,100);
 
 // background: the same soft gradient as the page, drawn inside WebGL so the glass can refract it
 function paintBackground(){
-  const css=getComputedStyle(document.documentElement),c=document.createElement('canvas');c.width=64;c.height=128;
-  const g=c.getContext('2d'),grad=g.createLinearGradient(0,0,0,128);
-  grad.addColorStop(0,css.getPropertyValue('--top').trim());grad.addColorStop(.75,css.getPropertyValue('--sky').trim());
-  g.fillStyle=grad;g.fillRect(0,0,64,128);
+  // midnight (or daylight) spotlight: the glow sits behind the jar, so the clear glass shows by its lit edges
+  const css=getComputedStyle(document.documentElement),v=n=>css.getPropertyValue(n).trim(),c=document.createElement('canvas');c.width=256;c.height=512;
+  const g=c.getContext('2d'),grad=g.createRadialGradient(128,230,8,128,230,330);
+  grad.addColorStop(0,v('--bg-c'));grad.addColorStop(.45,v('--bg-m'));grad.addColorStop(1,v('--bg-e'));
+  g.fillStyle=grad;g.fillRect(0,0,256,512);
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
   scene.background?.dispose?.();scene.background=t;
 }

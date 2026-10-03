@@ -4,7 +4,7 @@
 
 **Live:** https://surajjbv.github.io/mobile-coin-jar/
 
-**Version:** 2026.10.04-1 · [what's new](CHANGELOG.md) · the grown-ups menu shows which version a phone is running
+**Version:** 2026.10.04-2 · [what's new](CHANGELOG.md) · the grown-ups menu shows which version a phone is running
 and offers to update when a newer one is live
 
 ## Why I built this
