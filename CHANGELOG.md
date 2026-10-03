@@ -4,6 +4,14 @@ The version on a phone is shown at the bottom of the grown-ups menu (triple-tap 
 web is in [`version.json`](https://surajjbv.github.io/mobile-coin-jar/version.json); the menu compares the two and offers to
 update.
 
+## 2026.10.04-4
+- Works on more phones: a small import-map polyfill for older iPhones/Android (loaded only when needed), colour
+  fallbacks where `color-mix()` isn't supported, `vh` fallbacks for `lvh/dvh`, and a redraw if iOS drops the 3D
+  canvas while the app is in the background.
+- Android's Back button closes an open menu instead of leaving the app; no long-press pop-ups or pull-to-refresh.
+- Tighter grown-ups menu that fits one screen: Sounds, Tilt & shake and Passcode are matching buttons (green when on),
+  and a bigger gold "⭐ Rate us" chip.
+
 ## 2026.10.04-3
 - Tidier grown-ups menu: no subtitle, "Jar is full at (up to 10,000)" on one line, all label emojis in one row,
   and "⭐ Rate" as a chip in the top-right corner.

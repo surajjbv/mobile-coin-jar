@@ -18,6 +18,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <!-- module map first: browsers ignore one that arrives after module downloads have started -->
+<script>
+  // phones whose browser predates import maps (e.g. iOS before 16.4) get a small polyfill; everyone else downloads nothing
+  if(!(window.HTMLScriptElement&&HTMLScriptElement.supports&&HTMLScriptElement.supports('importmap'))){
+    var shim=document.createElement('script');shim.async=true;shim.src='https://cdn.jsdelivr.net/npm/es-module-shims@2.8.4/dist/es-module-shims.js';document.head.appendChild(shim);
+  }
+</script>
 <script type="importmap">
 {"imports":{
   "three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js",
@@ -45,15 +51,15 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* edge to edge: the page paints under the status bar, notch and home indicator; content keeps clear via safe-area insets */
 /* iOS 26 Safari ignores theme-color and tints its bars from the page's base background colour, so that must be the top colour */
-html{background:var(--top);height:100%}
-body{margin:0;min-height:100lvh;background:var(--top) radial-gradient(ellipse 120% 70% at 50% 45%,var(--bg-c),var(--bg-m) 45%,var(--bg-e)) fixed;color:var(--ink);
+html{background:var(--top);height:100%;overscroll-behavior:none;-webkit-touch-callout:none;-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;min-height:100lvh;background:var(--top) radial-gradient(ellipse 120% 70% at 50% 45%,var(--bg-c),var(--bg-m) 45%,var(--bg-e)) fixed;color:var(--ink);
   font-family:"Baloo 2",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;touch-action:none;
   -webkit-user-select:none;user-select:none;overflow:hidden;overscroll-behavior:none}
 /* Safari tints its top bar from what touches the top edge: match the gradient's lightest (top) colour, not the page's darker base */
 #tint{position:fixed;left:0;top:0;width:100vw;height:max(2px,env(safe-area-inset-top));background:var(--top);pointer-events:none;z-index:2}
-#scene{position:fixed;left:0;top:0;width:100vw;height:100lvh;display:block;cursor:grab}
-#fx{position:fixed;left:0;top:0;width:100vw;height:100lvh;pointer-events:none;z-index:3}
-main{position:fixed;left:0;top:0;width:100vw;height:100dvh;pointer-events:none;z-index:1;
+#scene{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100lvh;display:block;cursor:grab}
+#fx{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100lvh;pointer-events:none;z-index:3}
+main{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;pointer-events:none;z-index:1;
   display:flex;flex-direction:column;align-items:center;
   padding:max(14px,calc(env(safe-area-inset-top) + 6px)) 16px max(14px,calc(env(safe-area-inset-bottom) + 6px))}
 #top{display:flex;flex-direction:column;align-items:center}
@@ -121,7 +127,18 @@ label{display:block;font-size:16px;color:var(--muted);margin:10px 0 4px}
 .emojis{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-bottom:8px}
 .emojis button{width:100%;aspect-ratio:1;max-height:44px;padding:0;border-radius:12px;border:2px solid transparent;background:var(--sky);font-size:20px}
 label.oneline{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}label.oneline span{font-size:13px;opacity:.85}
-.sheet>.link.top-chip{position:absolute;top:14px;right:16px;margin:0;padding:6px 12px;font-size:14px;z-index:1}
+/* Rate us: a gold chip in the corner, easy to spot */
+.sheet .top-chip{position:absolute;top:12px;right:14px;z-index:1;border:0;border-radius:999px;padding:8px 14px;font:inherit;font-size:16px;font-weight:800;
+  color:#3a2600;background:linear-gradient(180deg,#ffe9a0,#f6bd2a);box-shadow:0 3px 0 #b07c0c,0 6px 14px rgba(246,189,42,.35)}
+.sheet .top-chip:active{transform:translateY(2px);box-shadow:0 1px 0 #b07c0c}
+/* Sounds / Tilt / Passcode: three matching buttons, green when on */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.tog{display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 4px 8px;border:0;border-radius:16px;font:inherit;color:var(--jt);
+  background:linear-gradient(180deg,var(--j1),var(--j2));box-shadow:0 4px 0 var(--j3),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .08s;
+  --j1:color-mix(in srgb,var(--sky) 85%,#fff);--j2:var(--sky);--j3:color-mix(in srgb,var(--sky) 60%,#000);--jt:var(--ink)}
+.tog:active{transform:translateY(3px);box-shadow:0 1px 0 var(--j3)}
+.tog span{font-size:22px;line-height:1.1}.tog b{font-size:14px;line-height:1.2}.tog small{font-size:12px;font-weight:700;opacity:.8}
+.tog.on{--j1:#62da80;--j2:#22a045;--j3:#156a2b;--jt:#fff}
 .emojis button.on{border-color:var(--gold-dk);background:var(--gold)}
 .stars{display:flex;justify-content:center;gap:6px;margin:4px 0 10px}
 .stars button{background:none;border:0;font-size:40px;line-height:1;padding:4px;filter:grayscale(1);opacity:.45;transition:transform .15s}
@@ -134,6 +151,15 @@ label.oneline{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}label.on
 .secondary{background:var(--sky);color:var(--ink)}
 .link{display:block;margin:14px auto 0;background:none;border:0;color:var(--muted);font:inherit;font-size:16px;text-decoration:underline}
 button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+@supports not (color:color-mix(in srgb,red 50%,blue)){
+  :root{--glass:rgba(255,255,255,.62)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--glass:rgba(22,33,58,.7)}}
+  :root[data-theme="dark"]{--glass:rgba(22,33,58,.7)}
+  #label{background:var(--glass)}
+  .actions .secondary,.row button,.quick button,.tog{--j1:var(--sky2);--j3:rgba(0,0,0,.35)}
+  #bar button,.actions button{background:linear-gradient(180deg,var(--j1),var(--j2))}
+  .sheet{background:var(--sheet)}.pad button{background:var(--sky)}
+}
 /* ===== premium skin (styles inspired by uiverse.io patterns: jelly 3D buttons, glass cards, toggle switches) ===== */
 :root{--glass:color-mix(in srgb,var(--sheet) 62%,transparent);--glass-edge:rgba(255,255,255,.28);--shadow:0 14px 34px rgba(4,20,30,.28)}
 /* the count: a glass pill, the number filled with a glowing gradient (still red / amber / green), a coin that flips now and then */
@@ -175,7 +201,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 .sheet{background:linear-gradient(180deg,color-mix(in srgb,var(--sheet) 92%,#fff),var(--sheet));border:1px solid var(--glass-edge);border-bottom:0;
   box-shadow:0 -12px 40px rgba(0,0,0,.35);padding-top:30px;position:relative}
 .sheet::before{content:'';position:absolute;top:10px;left:50%;width:44px;height:5px;margin-left:-22px;border-radius:9px;background:var(--muted);opacity:.45}
-.sheet h2{font-size:26px;letter-spacing:-.01em}
+.sheet h2{font-size:24px;letter-spacing:-.01em;margin-bottom:4px}
+.sheet label{margin:8px 0 3px}
+.sheet .row input,.sheet .row button{height:50px}.sheet .quick{margin-top:6px}.sheet .quick button{height:36px}
+.sheet .actions{margin-top:14px}.sheet .actions button{height:52px}
 .row input,.sheet textarea,.sheet input.plain{background:rgba(0,0,0,.08);border-color:transparent;box-shadow:inset 0 2px 6px rgba(0,0,0,.18)}
 /* the passcode keypad: round glossy keys like a phone lock screen */
 .pad{grid-template-columns:repeat(3,72px);justify-content:center;gap:14px 26px}
@@ -184,18 +213,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 .pad button:active{transform:scale(.92);box-shadow:0 0 0 6px rgba(247,194,26,.35)}
 .pad button.ghost{box-shadow:none;width:auto;border-radius:12px}
 .dots i.on{box-shadow:0 0 10px var(--gold)}
-/* on/off switches */
-.switch{display:flex;align-items:center;justify-content:space-between;width:100%;margin:12px 0 0;padding:12px 14px;border:0;border-radius:16px;
-  background:rgba(0,0,0,.07);color:var(--ink);font:inherit;font-size:17px;font-weight:700;text-align:left}
-.switch i{flex:none;position:relative;width:54px;height:32px;border-radius:999px;background:color-mix(in srgb,var(--muted) 55%,transparent);
-  box-shadow:inset 0 2px 5px rgba(0,0,0,.3);transition:background .25s}
-.switch i::after{content:'';position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;
-  box-shadow:0 2px 5px rgba(0,0,0,.3);transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
-.switch.on i{background:linear-gradient(180deg,#62da80,#22a045)}
-.switch.on i::after{transform:translateX(22px)}
 /* the other menu links become chips */
 .link{display:inline-block;margin:12px 4px 0;padding:8px 16px;border-radius:999px;background:rgba(0,0,0,.07);text-decoration:none;font-weight:700}
-#chg,#fb{display:inline-block}
 .sheet>.link{display:table;margin:12px auto 0}
 /* floating +N / -N: a soft glow */
 .float{text-shadow:0 0 18px currentColor,0 2px 0 rgba(0,0,0,.2)}
@@ -251,7 +270,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.04-3'; // this phone's version; version.json on the site holds the latest (keep the two in step)
+const APP_VERSION='2026.10.04-4'; // this phone's version; version.json on the site holds the latest (keep the two in step)
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -474,6 +493,13 @@ function openAdd(prefill){
 const scrim=$('#scrim'),sheet=$('#sheet');
 function close(){scrim.classList.remove('open')}
 scrim.addEventListener('click',e=>{if(e.target===scrim)close()});
+// the phone's Back button (Android) closes an open sheet rather than leaving the app
+new MutationObserver(()=>{
+  const open=scrim.classList.contains('open');
+  if(open&&!(history.state&&history.state.sheet))history.pushState({sheet:1},'');
+  else if(!open&&history.state&&history.state.sheet)history.back();
+}).observe(scrim,{attributes:true,attributeFilter:['class']});
+addEventListener('popstate',()=>{if(scrim.classList.contains('open'))close()});
 let entry='',firstPin='',mode='';
 const copy={set1:['Create a passcode','Pick 4 digits only you know'],set2:['Confirm passcode','Enter the same 4 digits again'],
   enter:['Enter passcode','Grown-ups only'],change1:['New passcode','Pick 4 new digits'],change2:['Confirm new passcode','Enter the same 4 digits again']};
@@ -572,7 +598,7 @@ function openFeedback(){
 }
 function openEdit(){
   let pick=label.e;
-  sheet.innerHTML=`<button class="link top-chip" id="fb">⭐ Rate</button><h2>Set the coins</h2>
+  sheet.innerHTML=`<button class="top-chip" id="fb">⭐ Rate us</button><h2>Set the coins</h2>
   <label for="ci">Coins in the jar</label>
   <div class="row"><button data-d="-1" aria-label="Remove one">−</button><input id="ci" type="number" inputmode="numeric" min="0" value="${state.coins}"><button data-d="1" aria-label="Add one">+</button></div>
   <div class="quick"><button data-s="0">Empty</button><button data-d="-10">−10</button><button data-d="10">+10</button><button data-s="full">Fill up</button></div>
@@ -582,9 +608,11 @@ function openEdit(){
   <div class="emojis">${EMOJI.map(e=>`<button data-e="${e}" class="${e===pick?'on':''}" aria-label="Use ${e}">${e}</button>`).join('')}</div>
   <div class="row"><input id="gi" type="text" maxlength="30" placeholder="e.g. Money in the phone" value="${esc(label.t)}"></div>
   <div class="actions"><button class="secondary" id="cancel">Cancel</button><button class="primary" id="save">Save</button></div>
-  <button class="switch" id="snd" role="switch"><span>🔊 Sounds &amp; vibration</span><i aria-hidden="true"></i></button>
-  <button class="switch" id="tlt" role="switch"><span>📱 Tilt &amp; shake</span><i aria-hidden="true"></i></button>
-  <button class="link" id="chg">Change passcode</button>
+  <div class="grid3">
+    <button class="tog" id="snd" role="switch"><span>🔊</span><b>Sounds</b><small></small></button>
+    <button class="tog" id="tlt" role="switch"><span>📱</span><b>Tilt &amp; shake</b><small></small></button>
+    <button class="tog" id="chg"><span>🔑</span><b>Passcode</b><small>Change</small></button>
+  </div>
   <p class="hint" style="margin-top:12px;font-size:15px" id="visits" hidden></p>
   <p class="hint" style="margin-top:4px;font-size:13px" id="ver">Version ${APP_VERSION}</p>`;
   checkVersion();showVisits();
@@ -600,10 +628,10 @@ function openEdit(){
   $('#cancel').onclick=close;
   $('#chg').onclick=()=>openPin('change1');
   $('#fb').onclick=openFeedback;
-  const snd=$('#snd'),sndLabel=()=>{snd.classList.toggle('on',soundOn);snd.setAttribute('aria-checked',soundOn)};
+  const snd=$('#snd'),sndLabel=()=>{snd.classList.toggle('on',soundOn);snd.setAttribute('aria-checked',soundOn);snd.querySelector('small').textContent=soundOn?'On':'Off'};
   sndLabel();snd.onclick=()=>{soundOn=!soundOn;store.set('cj_sound',soundOn);sndLabel();clink()};
   // iPhone asks for motion access every time the app is opened (Apple doesn't let sites keep it); this turns it off
-  const tlt=$('#tlt'),tltLabel=()=>{tlt.classList.toggle('on',tiltOn);tlt.setAttribute('aria-checked',tiltOn)};
+  const tlt=$('#tlt'),tltLabel=()=>{tlt.classList.toggle('on',tiltOn);tlt.setAttribute('aria-checked',tiltOn);tlt.querySelector('small').textContent=tiltOn?'On':'Off'};
   tltLabel();tlt.onclick=()=>{tiltOn=!tiltOn;store.set('cj_tilt',tiltOn);tltLabel();jar?.tilt(tiltOn)};
   $('#save').onclick=()=>{
     const before=state.full>0?state.coins/state.full*100:0,sameJar=Math.max(1,parseInt(fi.value)||100)===state.full;
@@ -641,6 +669,9 @@ await RAPIER.init();
 // jar dimensions (world units): inner radius R, coins live between the floor (y=0) and the shoulder (y=TOP)
 const R=1,TOP=2.4,NECK=.8,G=22;
 const canvas=$('#scene');
+canvas.addEventListener('webglcontextlost',e=>e.preventDefault()); // let the browser hand the context back
+canvas.addEventListener('webglcontextrestored',()=>{paintBackground();kick()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)kick()}); // redraw on return to the app
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
