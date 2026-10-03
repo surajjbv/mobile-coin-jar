@@ -1,10 +1,11 @@
 # Changelog
 
 The version on a phone is shown at the bottom of the grown-ups menu (triple-tap the number). The latest version on the
-web is in [`version.json`](https://coin-jar-surajjbv.netlify.app/version.json); the menu compares the two and offers to
+web is in [`version.json`](https://surajjbv.github.io/coin-jar/version.json); the menu compares the two and offers to
 update.
 
 ## 2026.10.03-1
+- New home: https://surajjbv.github.io/coin-jar/ (GitHub Pages). The Netlify address stays on 2026.10.01-5.
 - Version check: the grown-ups menu shows "✓ up to date" or "newer version available, tap to update".
 - `version.json` on the site, this changelog, and the current version in the README.
 

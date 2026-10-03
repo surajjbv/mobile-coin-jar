@@ -2,7 +2,7 @@
 
 **A free, physical-feeling coin jar that shows a young child how much money is left in a phone.**
 
-**Live:** https://coin-jar-surajjbv.netlify.app
+**Live:** https://surajjbv.github.io/coin-jar/
 
 **Version:** 2026.10.03-1 · [what's new](CHANGELOG.md) · the grown-ups menu shows which version a phone is running
 and offers to update when a newer one is live
@@ -100,7 +100,8 @@ It's free, with no ads and no sign-up, and nothing leaves the phone.
 - Installable PWA: `manifest.webmanifest` with regular and maskable icons. A service worker (`sw.js`) precaches the
   page, icons, sounds and the pinned library builds, so the app opens offline. The page itself is network-first,
   so a new deploy shows up on the next open.
-- Hosting is on Netlify: every push to `main` deploys automatically.
+- Hosted on GitHub Pages: every push to `main` goes live automatically. (It started on Netlify, but the free plan's
+  monthly deploy credits ran out; the old address stays on an earlier version.)
 
 ## Credits
 
