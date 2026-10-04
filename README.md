@@ -54,6 +54,7 @@ Kids can tilt and shake the phone to rattle the coins. Only grown-ups can add mo
 </table>
 
 First time: triple-tap the number, set a passcode, and enter how many coins you have.
+Forgot the passcode? Tap **Forgot passcode?**, answer two quick sums, and choose a new one. Your coins are kept.
 
 <p align="center"><img src="docs/menu.jpg" width="220" alt="The grown-ups menu"><br><sub>The grown-ups menu</sub></p>
 

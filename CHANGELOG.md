@@ -4,6 +4,10 @@ The version on a phone is shown at the bottom of the grown-ups menu (triple-tap 
 web is in [`version.json`](https://surajjbv.github.io/mobile-coin-jar/version.json); the menu compares the two and offers to
 update.
 
+## 2026.10.04-5
+- **Forgot passcode?** on the passcode screen: two quick multiplication sums and a 5-second press-and-hold,
+  then choose a new passcode. Coins, label and settings are kept.
+
 ## 2026.10.04-4
 - Works on more phones: a small import-map polyfill for older iPhones/Android (loaded only when needed), colour
   fallbacks where `color-mix()` isn't supported, `vh` fallbacks for `lvh/dvh`, and a redraw if iOS drops the 3D

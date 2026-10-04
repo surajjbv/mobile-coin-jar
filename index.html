@@ -213,6 +213,13 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 .pad button:active{transform:scale(.92);box-shadow:0 0 0 6px rgba(247,194,26,.35)}
 .pad button.ghost{box-shadow:none;width:auto;border-radius:12px}
 .dots i.on{box-shadow:0 0 10px var(--gold)}
+.sheet .forgot{display:table;margin:14px auto 0;font-size:15px}
+.sheet .sum{text-align:center;font-size:38px;font-weight:800;margin:4px 0 10px;color:var(--gold)}
+.hold{position:relative;overflow:hidden;width:100%;height:60px;margin-top:8px;border:0;border-radius:18px;font:inherit;font-size:19px;font-weight:800;
+  color:#fff;background:linear-gradient(180deg,#ff8574,#e0412f);box-shadow:0 5px 0 #9a2a1e;touch-action:none;-webkit-user-select:none;user-select:none}
+.hold .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,255,255,.35);transition:width .2s}
+.hold.holding .fill{width:100%;transition:width 5s linear}
+.hold .txt{position:relative}
 /* the other menu links become chips */
 .link{display:inline-block;margin:12px 4px 0;padding:8px 16px;border-radius:999px;background:rgba(0,0,0,.07);text-decoration:none;font-weight:700}
 .sheet>.link{display:table;margin:12px auto 0}
@@ -270,7 +277,7 @@ let pin=store.get('cj_pin',null);
 let label=store.get('cj_label',{e:'',t:''});
 const CAP=10000; // most coins drawn (they get smaller as the jar holds more); above this each coin shown stands for more than one
 let jar=null;  // the 3D jar, once its module has loaded
-const APP_VERSION='2026.10.04-4'; // this phone's version; version.json on the site holds the latest (keep the two in step)
+const APP_VERSION='2026.10.04-5'; // this phone's version; version.json on the site holds the latest (keep the two in step)
 
 function wantedCoins(){
   return state.full<=CAP?Math.min(state.coins,state.full)
@@ -511,10 +518,42 @@ function openPin(m,err){
   sheet.innerHTML=`<h2>${copy[m][0]}</h2><p class="hint ${err?'err':''}" id="pinmsg">${err||copy[m][1]}</p>
   <div class="dots" id="dots">${'<i></i>'.repeat(4)}</div>
   <div class="pad">${d.slice(0,9).map(n=>`<button data-k="${n}">${n}</button>`).join('')}
-  <button class="ghost" data-k="x">Cancel</button><button data-k="${d[9]}">${d[9]}</button><button class="ghost" data-k="b">Delete</button></div>`;
+  <button class="ghost" data-k="x">Cancel</button><button data-k="${d[9]}">${d[9]}</button><button class="ghost" data-k="b">Delete</button></div>
+  ${m==='enter'?'<button class="link forgot" id="forgot">Forgot passcode?</button>':''}`;
   scrim.classList.add('open');
   sheet.querySelectorAll('.pad button').forEach(b=>b.onclick=()=>key(b.dataset.k));
+  if(m==='enter')$('#forgot').onclick=()=>openForgot(0);
   if(m==='enter'&&lock.until>Date.now())showLock();
+}
+// ---- forgot the passcode: a grown-up challenge (two sums, then press and hold), then choose a new one ----
+// easy for an adult, too hard for a 5-year-old; coins, label and settings are kept
+function openForgot(right){
+  scrim.classList.add('open');
+  const a=12+Math.floor(Math.random()*78),b=6+Math.floor(Math.random()*4);
+  if(right>=2){ // both sums right: press and hold to confirm
+    sheet.innerHTML=`<h2>One last step</h2><p class="hint">Press and hold the button for 5 seconds</p>
+    <button class="hold" id="hold"><span class="fill"></span><span class="txt">Hold to reset passcode</span></button>
+    <button class="link" id="cancel">Cancel</button>`;
+    const h=$('#hold');let timer=0;
+    const stop=()=>{clearTimeout(timer);h.classList.remove('holding')};
+    h.onpointerdown=e=>{e.preventDefault();h.classList.add('holding');timer=setTimeout(()=>{
+      lock={n:0,until:0};store.set('cj_lock',lock);openPin('change1'); // choose a new passcode; then back to the menu
+    },5000)};
+    h.onpointerup=h.onpointerleave=h.onpointercancel=stop;
+    $('#cancel').onclick=close;return;
+  }
+  sheet.innerHTML=`<h2>Grown-up check</h2><p class="hint" id="fq">${right?'Correct! One more:':'Answer to reset your passcode'}</p>
+  <p class="sum">${a} × ${b} = ?</p>
+  <div class="row"><input id="fa" type="number" inputmode="numeric" placeholder="Answer"></div>
+  <div class="actions"><button class="secondary" id="cancel">Cancel</button><button class="primary" id="check">Check</button></div>`;
+  const fa=$('#fa');fa.focus();
+  $('#cancel').onclick=close;
+  $('#check').onclick=()=>{
+    if(parseInt(fa.value)===a*b)return openForgot(right+1);
+    fa.value='';$('#fq').textContent='Not quite, try this one';$('#fq').classList.add('err');
+    setTimeout(()=>openForgot(0),700); // a wrong answer starts over with a new sum
+  };
+  fa.onkeydown=e=>{if(e.key==='Enter')$('#check').click()};
 }
 function showLock(){ // too many wrong tries: keypad off with a countdown
   const msg=$('#pinmsg'),btns=sheet.querySelectorAll('.pad button:not([data-k="x"])');
