@@ -91,8 +91,14 @@ optional feedback ever leave it.
 python3 -m http.server 8000
 ```
 
+**Check before pushing** (GitHub Pages serves `main` as it is)
+
+```bash
+npm test   # versions agree, offline files exist, cached library versions match the page, scripts parse
+```
+
 **Credits:** coin sounds from [CreatorAssets](https://creatorassets.com/audio/coins-clink/) (CC0) · the office man is
 [Business Man](https://poly.pizza/m/JFrLIKqvCH) by Quaternius (CC0) · button and card styles inspired by
-[uiverse.io](https://uiverse.io/).
+[uiverse.io](https://uiverse.io/). · License: MIT.
 
 </details>

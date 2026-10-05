@@ -1,0 +1,11 @@
+{
+  "name": "mobile-coin-jar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A jar of coins that shows a young child how much money is left in the phone (static PWA, GitHub Pages)",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
