@@ -4,6 +4,10 @@ The version on a phone is shown at the bottom of the grown-ups menu (triple-tap 
 web is in [`version.json`](https://surajjbv.github.io/mobile-coin-jar/version.json); the menu compares the two and offers to
 update.
 
+## 2026.10.14-1
+- The deposit film's slow motion for the first beat of the coin cascade works again (a code slip on 1 Oct had
+  switched it off).
+
 ## 2026.10.04-5
 - **Forgot passcode?** on the passcode screen: two quick multiplication sums and a 5-second press-and-hold,
   then choose a new passcode. Coins, label and settings are kept.
