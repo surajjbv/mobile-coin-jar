@@ -5,7 +5,12 @@
   "type": "module",
   "description": "A jar of coins that shows a young child how much money is left in the phone (static PWA, GitHub Pages)",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "check": "biome check .",
+    "fix": "biome check --write ."
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15"
+  }
 }

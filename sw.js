@@ -48,7 +48,7 @@ async function networkFirst(req) {
   const fresh = fetch(req.url, { cache: 'no-cache' }).then(res => { if (res.ok) cache.put('./', res.clone()); return res; }); // skip the host's HTTP cache too
   try {
     return await Promise.race([fresh, new Promise((_, no) => setTimeout(() => no(new Error('slow')), 4000))]);
-  } catch (e) {
+  } catch {
     fresh.catch(() => {});
     return (await cache.match('./')) || fresh.catch(() => Response.error());
   }

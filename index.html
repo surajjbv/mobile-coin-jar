@@ -21,7 +21,7 @@
 <script>
   // phones whose browser predates import maps (e.g. iOS before 16.4) get a small polyfill; everyone else downloads nothing
   if(!(window.HTMLScriptElement&&HTMLScriptElement.supports&&HTMLScriptElement.supports('importmap'))){
-    var shim=document.createElement('script');shim.async=true;shim.src='https://cdn.jsdelivr.net/npm/es-module-shims@2.8.4/dist/es-module-shims.js';document.head.appendChild(shim);
+    const shim=document.createElement('script');shim.async=true;shim.src='https://cdn.jsdelivr.net/npm/es-module-shims@2.8.4/dist/es-module-shims.js';document.head.appendChild(shim);
   }
 </script>
 <script type="importmap">
@@ -241,7 +241,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 <div id="twinkle" aria-hidden="true"><i style="left:8%;top:22%;animation-delay:0s"></i><i style="left:88%;top:18%;animation-delay:1.2s"></i><i style="left:14%;top:64%;animation-delay:2.1s"></i><i style="left:92%;top:58%;animation-delay:0.6s"></i><i style="left:70%;top:10%;animation-delay:3.0s"></i><i style="left:24%;top:8%;animation-delay:1.7s"></i><i style="left:80%;top:78%;animation-delay:2.6s"></i><i style="left:6%;top:84%;animation-delay:0.9s"></i><i style="left:55%;top:6%;animation-delay:3.6s"></i><i style="left:96%;top:36%;animation-delay:1.4s"></i></div>
 <main>
   <div id="top">
-    <button id="count" aria-label="Coin count. Triple-tap to edit"><svg class="c" viewBox="-20 -20 40 40" aria-hidden="true">
+    <button id="count" type="button" aria-label="Coin count. Triple-tap to edit"><svg class="c" viewBox="-20 -20 40 40" aria-hidden="true">
       <defs>
         <linearGradient id="gA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF6C4"/><stop offset=".3" stop-color="#FFD84D"/><stop offset=".6" stop-color="#F3B41F"/><stop offset=".85" stop-color="#D4930F"/><stop offset="1" stop-color="#FFE27A"/></linearGradient>
         <path id="star" d="M0,-7L1.7,-2.35L6.66,-2.16L2.76,.9L4.11,5.66L0,2.9L-4.11,5.66L-2.76,.9L-6.66,-2.16L-1.7,-2.35Z"/>
@@ -414,7 +414,7 @@ function fanfare(big){ // milestone: a rising arpeggio
 const fx=$('#fx'),fxc=fx.getContext('2d');let bits=[],fxRaf=0;
 function confetti(n){
   if(matchMedia('(prefers-reduced-motion: reduce)').matches)n=Math.round(n/4);
-  const W=fx.width=innerWidth*devicePixelRatio,H=fx.height=fx.clientHeight*devicePixelRatio,s=devicePixelRatio;
+  const W=innerWidth*devicePixelRatio;fx.width=W;const H=fx.clientHeight*devicePixelRatio;fx.height=H;const s=devicePixelRatio;
   const cols=['#F7C21A','#FFE27A','#E2574C','#5FD37A','#4FB3E8','#F58BD0'];
   for(let i=0;i<n;i++)bits.push({x:W/2+(Math.random()-.5)*W*.3,y:H*.55,vx:(Math.random()-.5)*14*s,vy:(-10-Math.random()*14)*s,
     w:(6+Math.random()*6)*s,h:(10+Math.random()*8)*s,a:Math.random()*6,va:(Math.random()-.5)*.4,c:cols[i%cols.length],life:1});
@@ -474,7 +474,7 @@ function openConfirm(title,note,yesLabel,yes){
   $('#yes').onclick=()=>{close();yes&&yes()};
 }
 $('#bar').addEventListener('submit',e=>{
-  e.preventDefault();const amt=$('#amt'),n=parseInt(amt.value);amt.blur();
+  e.preventDefault();const amt=$('#amt'),n=parseInt(amt.value,10);amt.blur();
   if(!(n>0))return shakeBar();
   if(state.coins===0)return openConfirm('The jar is empty! 🫙','There are no coins left to pay with','OK');
   const take=Math.min(n,state.coins),s=take===1?'':'s';
@@ -482,7 +482,7 @@ $('#bar').addEventListener('submit',e=>{
     n>state.coins?`Pay all ${state.coins.toLocaleString()} coin${s}?`:'Watch them leave the jar 👀','Yes, pay 💸',
     ()=>{amt.value='';changeCoins(-take)});
 });
-$('#add').addEventListener('click',()=>{const n=parseInt($('#amt').value);requireGrownUp(()=>openAdd(n>0?n:''))});
+$('#add').addEventListener('click',()=>{const n=parseInt($('#amt').value,10);requireGrownUp(()=>openAdd(n>0?n:''))});
 function openAdd(prefill){
   sheet.innerHTML=`<h2>Add coins</h2><p class="hint">Money came in? Pour it into the jar 🪙</p>
   <div class="row"><input id="ai" type="number" inputmode="numeric" min="1" placeholder="How many?" value="${prefill}"></div>
@@ -491,9 +491,9 @@ function openAdd(prefill){
   <button class="link" id="more">More settings</button>`;
   scrim.classList.add('open');
   const ai=$('#ai');
-  sheet.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>ai.value=(parseInt(ai.value)||0)+ +b.dataset.a);
+  sheet.querySelectorAll('[data-a]').forEach(b=>{b.onclick=()=>ai.value=(parseInt(ai.value,10)||0)+ +b.dataset.a});
   $('#cancel').onclick=close;$('#more').onclick=()=>openEdit();
-  $('#addgo').onclick=()=>{const n=parseInt(ai.value);if(!(n>0))return ai.focus();close();$('#amt').value='';window.officerNext=true;changeCoins(n)};
+  $('#addgo').onclick=()=>{const n=parseInt(ai.value,10);if(!(n>0))return ai.focus();close();$('#amt').value='';window.officerNext=true;changeCoins(n)};
 }
 
 // ---- sheet ----
@@ -521,7 +521,7 @@ function openPin(m,err){
   <button class="ghost" data-k="x">Cancel</button><button data-k="${d[9]}">${d[9]}</button><button class="ghost" data-k="b">Delete</button></div>
   ${m==='enter'?'<button class="link forgot" id="forgot">Forgot passcode?</button>':''}`;
   scrim.classList.add('open');
-  sheet.querySelectorAll('.pad button').forEach(b=>b.onclick=()=>key(b.dataset.k));
+  sheet.querySelectorAll('.pad button').forEach(b=>{b.onclick=()=>key(b.dataset.k)});
   if(m==='enter')$('#forgot').onclick=()=>openForgot(0);
   if(m==='enter'&&lock.until>Date.now())showLock();
 }
@@ -549,7 +549,7 @@ function openForgot(right){
   const fa=$('#fa');fa.focus();
   $('#cancel').onclick=close;
   $('#check').onclick=()=>{
-    if(parseInt(fa.value)===a*b)return openForgot(right+1);
+    if(parseInt(fa.value,10)===a*b)return openForgot(right+1);
     fa.value='';$('#fq').textContent='Not quite, try this one';$('#fq').classList.add('err');
     setTimeout(()=>openForgot(0),700); // a wrong answer starts over with a new sum
   };
@@ -557,15 +557,15 @@ function openForgot(right){
 }
 function showLock(){ // too many wrong tries: keypad off with a countdown
   const msg=$('#pinmsg'),btns=sheet.querySelectorAll('.pad button:not([data-k="x"])');
-  btns.forEach(b=>b.disabled=true);msg.classList.add('err');
+  btns.forEach(b=>{b.disabled=true});msg.classList.add('err');
   const tick=()=>{
     const left=Math.ceil((lock.until-Date.now())/1000);
-    if(left<=0){clearInterval(lockTimer);btns.forEach(b=>b.disabled=false);msg.classList.remove('err');msg.textContent=copy.enter[1];return}
+    if(left<=0){clearInterval(lockTimer);btns.forEach(b=>{b.disabled=false});msg.classList.remove('err');msg.textContent=copy.enter[1];return}
     msg.textContent=`Too many tries. Wait ${left}s`;
   };
   tick();lockTimer=setInterval(tick,500);
 }
-function dots(){[...$('#dots').children].forEach((d,i)=>d.classList.toggle('on',i<entry.length))}
+function dots(){[...$('#dots').children].forEach((d,i)=>{d.classList.toggle('on',i<entry.length)})}
 function key(k){
   if(k==='x')return close();
   if(mode==='enter'&&lock.until>Date.now())return; // locked out after 3 wrong tries
@@ -617,7 +617,7 @@ function openFeedback(){
   <div class="actions"><button class="secondary" id="cancel">Cancel</button><button class="primary" id="fbs">Send</button></div>
   <p class="hint" style="font-size:13px;margin-top:10px">Goes straight to the app's maker by email. Nothing else is shared.</p>`;
   scrim.classList.add('open');
-  sheet.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{stars=+b.dataset.r;sheet.querySelectorAll('[data-r]').forEach(x=>x.classList.toggle('on',+x.dataset.r<=stars))});
+  sheet.querySelectorAll('[data-r]').forEach(b=>{b.onclick=()=>{stars=+b.dataset.r;sheet.querySelectorAll('[data-r]').forEach(x=>{x.classList.toggle('on',+x.dataset.r<=stars)})}});
   $('#cancel').onclick=close;
   $('#fbs').onclick=async()=>{
     const msg=$('#fbm').value.trim(),email=$('#fbe').value.trim(),btn=$('#fbs');
@@ -657,13 +657,13 @@ function openEdit(){
   checkVersion();showVisits();
   scrim.classList.add('open');
   const ci=$('#ci'),fi=$('#fi');
-  const val=()=>Math.max(0,parseInt(ci.value)||0);
-  sheet.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>ci.value=Math.max(0,val()+ +b.dataset.d));
-  sheet.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>ci.value=b.dataset.s==='full'?Math.max(1,parseInt(fi.value)||100):0);
-  sheet.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{
+  const val=()=>Math.max(0,parseInt(ci.value,10)||0);
+  sheet.querySelectorAll('[data-d]').forEach(b=>{b.onclick=()=>ci.value=Math.max(0,val()+ +b.dataset.d)});
+  sheet.querySelectorAll('[data-s]').forEach(b=>{b.onclick=()=>ci.value=b.dataset.s==='full'?Math.max(1,parseInt(fi.value,10)||100):0});
+  sheet.querySelectorAll('[data-e]').forEach(b=>{b.onclick=()=>{
     pick=pick===b.dataset.e?'':b.dataset.e; // tap again to clear
-    sheet.querySelectorAll('[data-e]').forEach(x=>x.classList.toggle('on',x.dataset.e===pick));
-  });
+    sheet.querySelectorAll('[data-e]').forEach(x=>{x.classList.toggle('on',x.dataset.e===pick)});
+  }});
   $('#cancel').onclick=close;
   $('#chg').onclick=()=>openPin('change1');
   $('#fb').onclick=openFeedback;
@@ -673,8 +673,8 @@ function openEdit(){
   const tlt=$('#tlt'),tltLabel=()=>{tlt.classList.toggle('on',tiltOn);tlt.setAttribute('aria-checked',tiltOn);tlt.querySelector('small').textContent=tiltOn?'On':'Off'};
   tltLabel();tlt.onclick=()=>{tiltOn=!tiltOn;store.set('cj_tilt',tiltOn);tltLabel();jar?.tilt(tiltOn)};
   $('#save').onclick=()=>{
-    const before=state.full>0?state.coins/state.full*100:0,sameJar=Math.max(1,parseInt(fi.value)||100)===state.full;
-    state.coins=val();state.full=Math.max(1,parseInt(fi.value)||100);
+    const before=state.full>0?state.coins/state.full*100:0,sameJar=Math.max(1,parseInt(fi.value,10)||100)===state.full;
+    state.coins=val();state.full=Math.max(1,parseInt(fi.value,10)||100);
     label={e:pick,t:$('#gi').value.trim().slice(0,30)};
     store.set('cj_coins',state.coins);store.set('cj_full',state.full);store.set('cj_label',label);
     close();
@@ -878,7 +878,7 @@ function takeOut(n){ // the coins nearest the top (against gravity) float up out
     flying.push({from:new THREE.Vector3(p.x,p.y,p.z),rot:new THREE.Quaternion(r.x,r.y,r.z,r.w),t:-i*Math.min(.09,1.6/n),spin:(Math.random()-.5)*8});
     world.removeRigidBody(b);
   });
-  coins.forEach(b=>b.wakeUp());
+  coins.forEach(b=>{b.wakeUp()});
 }
 
 // ---- the packed mass (big jars only) ----
@@ -897,13 +897,13 @@ function setFloor(n){ // the physics coins rest on the top of the packed mass
   if(packedFloor){world.removeCollider(packedFloor,false);packedFloor=null}
   const top=packedTop(n);
   if(top>.001)packedFloor=world.createCollider(RAPIER.ColliderDesc.cylinder(top/2,R-.02).setTranslation(0,top/2,0).setFriction(.3),ground);
-  coins.forEach(b=>b.wakeUp());
+  coins.forEach(b=>{b.wakeUp()});
 }
 function setPacked(n){packed=packedShown=n;drawPacked(n);setFloor(n)}
 function freeze(k){ // the lowest physics coins become part of the packed mass
   const up=upAxis();
   coins.sort((a,b)=>{const pa=a.translation(),pb=b.translation();return (pa.x*up.x+pa.y*up.y+pa.z*up.z)-(pb.x*up.x+pb.y*up.y+pb.z*up.z)});
-  coins.splice(0,k).forEach(b=>world.removeRigidBody(b));
+  coins.splice(0,k).forEach(b=>{world.removeRigidBody(b)});
   setPacked(packed+k);
 }
 function thaw(k){ // the top of the packed mass becomes physics coins again (so there's always a layer to tilt)
@@ -994,6 +994,7 @@ function sparkUpdate(dt){
 let officerLoading=null;
 function loadOfficer(){ // resolves true once he's ready (or false if he can't load); safe to call more than once
   if(officerLoading)return officerLoading;
+  // biome-ignore lint/suspicious/noAssignInExpressions: keep the one loading promise and return it
   return officerLoading=new Promise(ready=>new GLTFLoader().load('officer.glb',gltf=>{
     const root=gltf.scene;
     root.traverse(o=>{
@@ -1148,7 +1149,7 @@ function reachArm(o,target,blend,left){
 function update(n,N){
   if(window.officerNext){window.officerNext=false;if(C.N===N)startOfficer()} // a deposit: the officer brings it (even when it's too small to add a drawn coin)
   if(C.N!==N){ // a different jar size: start again with coins sized for it
-    coins.forEach(b=>world.removeRigidBody(b));coins=[];flying=[];pending=0;C=sizeFor(N);buildMesh();setPacked(0);packedDrawn=-1;
+    coins.forEach(b=>{world.removeRigidBody(b)});coins=[];flying=[];pending=0;C=sizeFor(N);buildMesh();setPacked(0);packedDrawn=-1;
     wanted=n;restorePile();
     if(C.big&&!coins.length&&!packed)setPacked(Math.max(0,n-PHYS)); // a fresh big jar: start packed, pour the top layer
   }
@@ -1175,7 +1176,7 @@ function applyGravity(){
   const gx=x*Math.cos(yaw)+z*Math.sin(yaw),gz=-x*Math.sin(yaw)+z*Math.cos(yaw),g=world.gravity;
   const nx=g.x*.6+gx*G*.4,ny=g.y*.6+y*G*.4,nz=g.z*.6+gz*G*.4; // smooth sensor jitter
   const moved=Math.hypot(nx-g.x,ny-g.y,nz-g.z)>.3;
-  world.gravity={x:nx,y:ny,z:nz};if(moved){coins.forEach(b=>b.wakeUp());kick()}
+  world.gravity={x:nx,y:ny,z:nz};if(moved){coins.forEach(b=>{b.wakeUp()});kick()}
 }
 let tiltWorked=store.get('cj_tilt_ok',false);
 function sensed(){if(!tiltWorked){tiltWorked=true;store.set('cj_tilt_ok',true);$('#hint').hidden=true;fit()}}
@@ -1346,7 +1347,7 @@ function frame(now){
   // coin instances: the settled pile, then any coins flying out
   let i=0;
   for(const b of coins){const p=b.translation(),r=b.rotation();tmpP.set(p.x,p.y,p.z);tmpQ.set(r.x,r.y,r.z,r.w);tmpS.set(1,1,1);mesh.setMatrixAt(i++,tmpM.compose(tmpP,tmpQ,tmpS))}
-  flying=flying.filter(f=>(f.t+=dt/.9)<1);
+  flying=flying.filter(f=>{f.t+=dt/.9;return f.t<1});
   for(const f of flying){
     const t=Math.max(0,f.t),e=t*t*(3-2*t),up=TOP+1.8;
     if(f.t>0&&!f.sounded){f.sounded=true;whoosh()}
@@ -1363,7 +1364,7 @@ function frame(now){
       calmT=0;const pos=coins.map(b=>{const p=b.translation();return [p.x,p.y,p.z]});
       if(calmSnap&&calmSnap.length===pos.length){let m=0;pos.forEach((p,k)=>{m=Math.max(m,Math.hypot(p[0]-calmSnap[k][0],p[1]-calmSnap[k][1],p[2]-calmSnap[k][2]))});calmWins=m<.02?calmWins+1:0}
       calmSnap=pos;
-      if(calmWins>=2){coins.forEach(b=>b.sleep());calmWins=0;calmSnap=null}
+      if(calmWins>=2){coins.forEach(b=>{b.sleep()});calmWins=0;calmSnap=null}
     }
   }else{calmT=0;calmWins=0;calmSnap=null}
   renderFrame();
@@ -1378,7 +1379,7 @@ setTimeout(loadOfficer,1200); // after the jar is up, so he never slows the firs
 // test handle: step the scene by hand (browsers throttle animation frames in background tabs)
 window.__jar={world,THREE,SHOTS,officerObj:()=>officer,coins:()=>coins,officer:()=>officer&&{state:officer.state,x:+officer.grp.position.x.toFixed(2),hold,camD:+cam.d.toFixed(2),timeScale:+timeScale.toFixed(2),anims:Object.keys(officer.actions)},dbg:()=>({packed,packedShown,hold,yaw:+yaw.toFixed(2),lidOpen,lidTarget,pending,flying:flying.length,lidPop,raf}),tick:n=>{for(let k=0;k<n;k++)frame(last+1000/60)},C:()=>C,setDevG:v=>{devG.set(v.x,v.y,v.z);applyGravity()},jolt};
 window.jarReady({update,celebrate(cb,full){party=cb;partyPop=full;kick()},
-  tilt(on){if(!on){devG.set(0,-1,0);usingAccel=false;accelSign=0;world.gravity={x:0,y:-G,z:0};coins.forEach(b=>b.wakeUp());kick()}}}); // tilt switched off: gravity back to straight down
+  tilt(on){if(!on){devG.set(0,-1,0);usingAccel=false;accelSign=0;world.gravity={x:0,y:-G,z:0};coins.forEach(b=>{b.wakeUp()});kick()}}}); // tilt switched off: gravity back to straight down
 }catch(err){console.error(err);window.jarFailed()}
 </script>
 </body>
