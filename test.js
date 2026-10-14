@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-const read = (f) => fs.readFileSync(path.join(import.meta.dirname, f), 'utf8');
+const read = f => fs.readFileSync(path.join(import.meta.dirname, f), 'utf8');
 const html = read('index.html');
 const sw = read('sw.js');
 
@@ -18,17 +18,22 @@ test('the app version, version.json and the newest CHANGELOG entry agree', () =>
 });
 
 test('every file the offline cache and the manifest name exists', () => {
-  const local = [...sw.matchAll(/'([^'./][^']*\.(?:webmanifest|svg|png|glb))'/g)].map((m) => m[1]);
-  const sounds = sw.match(/\.\.\.\[([^\]]+)\]\s*\.map\(n => `sounds\/\$\{n\}\.m4a`\)/)?.[1].match(/'([^']+)'/g).map((s) => `sounds/${s.slice(1, -1)}.m4a`) ?? [];
-  const icons = JSON.parse(read('manifest.webmanifest')).icons.map((i) => i.src);
+  const local = [...sw.matchAll(/'([^'./][^']*\.(?:webmanifest|svg|png|glb))'/g)].map(m => m[1]);
+  const sounds =
+    sw
+      .match(/\.\.\.\[([^\]]+)\]\s*\.map\(n => `sounds\/\$\{n\}\.m4a`\)/)?.[1]
+      .match(/'([^']+)'/g)
+      .map(s => `sounds/${s.slice(1, -1)}.m4a`) ?? [];
+  const icons = JSON.parse(read('manifest.webmanifest')).icons.map(i => i.src);
   assert.ok(local.length && sounds.length && icons.length);
-  for (const f of [...local, ...sounds, ...icons]) assert.ok(fs.existsSync(path.join(import.meta.dirname, f)), `missing: ${f}`);
+  for (const f of [...local, ...sounds, ...icons])
+    assert.ok(fs.existsSync(path.join(import.meta.dirname, f)), `missing: ${f}`);
 });
 
 test('the offline cache holds the same library versions the page imports', () => {
   // 'three@0.186.1/...' or '@dimforge/rapier3d-compat@0.21.0/...' (the page writes .../npm/<pkg>, sw.js CDN + '<pkg>')
-  const versions = (s) => new Set([...s.matchAll(/(?:npm\/|')((?:@[\w-]+\/)?[\w.-]+@\d[\d.]*)\//g)].map((m) => m[1]));
-  const page = [...versions(html)].filter((v) => !v.startsWith('es-module-shims')); // the polyfill is loaded only when needed
+  const versions = s => new Set([...s.matchAll(/(?:npm\/|')((?:@[\w-]+\/)?[\w.-]+@\d[\d.]*)\//g)].map(m => m[1]));
+  const page = [...versions(html)].filter(v => !v.startsWith('es-module-shims')); // the polyfill is loaded only when needed
   const cached = versions(sw);
   assert.ok(page.length >= 2, 'no library imports found in index.html');
   for (const v of page) assert.ok(cached.has(v), `${v} is imported but not cached for offline use`);
@@ -36,7 +41,9 @@ test('the offline cache holds the same library versions the page imports', () =>
 
 test('the page scripts have no syntax errors', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'coin-jar-'));
-  const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)].filter((m) => !/importmap/.test(m[1]));
+  const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)].filter(
+    m => !/importmap/.test(m[1]),
+  );
   assert.ok(scripts.length >= 2);
   scripts.forEach(([, attrs, code], i) => {
     const file = path.join(dir, `s${i}.${/module/.test(attrs) ? 'mjs' : 'cjs'}`);
