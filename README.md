@@ -97,7 +97,8 @@ python3 -m http.server 8000
 npm install && npm run fix && npm run check && npm test
 ```
 `check` is Biome lint (index.html's scripts too) plus a format check of the `.js`/`.json` files; index.html keeps its
-compact hand layout. `npm test`: versions agree, offline files exist, cached library versions match the page, scripts parse.
+compact hand layout. A pre-commit hook runs all of this plus pii-check.sh; turn it on once per clone with
+`git config core.hooksPath .githooks`. `npm test`: versions agree, offline files exist, cached library versions match the page, scripts parse.
 
 **Credits:** coin sounds from [CreatorAssets](https://creatorassets.com/audio/coins-clink/) (CC0) · the office man is
 [Business Man](https://poly.pizza/m/JFrLIKqvCH) by Quaternius (CC0) · button and card styles inspired by
