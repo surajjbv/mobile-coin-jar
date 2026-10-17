@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "A jar of coins that shows a young child how much money is left in the phone (static PWA, GitHub Pages)",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "test": "node --test",
     "check": "biome check .",
